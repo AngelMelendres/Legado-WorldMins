@@ -1,32 +1,41 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { MiniKit, WalletAuthInput } from "@worldcoin/minikit-js";
-import { Button } from "@worldcoin/mini-apps-ui-kit-react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/router";
+import { Infinity, Heart, Scan } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import AnimatedBackground from "@/components/animated-background";
 import MobileHeader from "@/components/mobile-header";
 import MobileNavbar from "@/components/mobile-navbar";
+import Image from "next/image";
 
-const walletAuthInput = (nonce: string): WalletAuthInput => {
-  return {
-    nonce,
-    requestId: "0",
-    expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    notBefore: new Date(Date.now() - 60 * 60 * 1000),
-    statement: "Inicia sesión con CertiMind usando tu World ID",
-  };
-};
+const walletAuthInput = (nonce: string): WalletAuthInput => ({
+  nonce,
+  requestId: "0",
+  expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  notBefore: new Date(Date.now() - 60 * 60 * 1000),
+  statement: "Inicia sesión con CertiMind usando tu World ID",
+});
 
 export default function Home() {
+  const router = useRouter();
+  const { setTheme } = useTheme();
+
   const [loading, setLoading] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+
+  useEffect(() => {
+    setFadeIn(true);
+    setTheme("dark");
+  }, [setTheme]);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -67,6 +76,7 @@ export default function Home() {
       });
 
       const loginData = await loginRes.json();
+
       if (!loginRes.ok || !loginData.user?.id) {
         setError(loginData.error || "Fallo validando con el servidor.");
         return;
@@ -85,15 +95,12 @@ export default function Home() {
         setStatus(status);
         setProfilePicture(profilePictureUrl);
 
-        const storedUser = {
-          id,
-          username,
-          status,
-          profilePictureUrl,
-        };
+        localStorage.setItem(
+          "certimind_user",
+          JSON.stringify({ id, username, status, profilePictureUrl })
+        );
 
-        localStorage.setItem("certimind_user", JSON.stringify(storedUser));
-        router.push("/pagos"); // redirección después del login
+        router.push("/dashboard"); 
       } else {
         setError("No se pudo iniciar sesión con NextAuth.");
       }
@@ -105,58 +112,77 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen max-w-md mx-auto bg-background">
-      <MobileHeader title="CertiMind" />
+    <div className="mobile-app">
+      <main className="mobile-content flex flex-col items-center justify-center relative overflow-hidden min-h-screen">
+        <AnimatedBackground />
 
-      <main className="flex-1 px-4 pb-16">
-        <section className="py-10">
-          <div className="space-y-6 text-center">
-            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary/30 to-primary/10 shadow-inner flex items-center justify-center">
-              <ShieldCheck className="h-9 w-9 text-primary" />
-            </div>
-            <h1 className="text-4xl font-black tracking-tight text-foreground">
-              CertiMind
-            </h1>
-            <p className="text-base font-semibold text-muted-foreground leading-snug">
-              Registra tu creatividad. Protege tu identidad. Demuestra tu
-              autoría.
-            </p>
-            <div className="text-sm text-muted-foreground max-w-xs mx-auto space-y-1 leading-relaxed">
-              <p>
-                CertiMind te permite registrar ideas, diseños o prototipos con
-                verificación humana y certificado digital inmediato.
-              </p>
-              <p>
-                Puedes usar un seudónimo o activar el modo legal si necesitas
-                mayor validez jurídica. Todo en menos de un minuto.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center justify-center pt-4 space-y-2">
-              <Button onClick={handleLogin} disabled={loading}>
-                {loading ? "Conectando..." : "Iniciar sesión con World ID"}
-              </Button>
-
-              {userId && (
-                <div className="text-green-600 text-sm mt-2 space-y-1">
-                  <p>✅ Sesión iniciada</p>
-                  <p>ID: {userId}</p>
-                  {username && <p>Usuario: {username}</p>}
-                  {status && <p>Estado: {status}</p>}
-                  {profilePicture && (
-                    <img
-                      src={profilePicture}
-                      alt="Foto de perfil"
-                      className="w-12 h-12 rounded-full mx-auto mt-2"
-                    />
-                  )}
-                </div>
-              )}
-
-              {error && <p className="text-red-500 text-sm">❌ {error}</p>}
+        <div
+          className={`max-w-md w-full space-y-8 text-center transition-opacity duration-1000 ${
+            fadeIn ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="flex justify-center">
+            <div className="relative w-24 h-24 mb-6">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Infinity className="w-16 h-16 text-primary animate-pulse" />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Heart className="w-10 h-10 text-white opacity-80" />
+              </div>
             </div>
           </div>
-        </section>
+
+          <h1 className="text-3xl font-bold tracking-tight text-white">Legacy</h1>
+
+          <div className="mt-6 space-y-6">
+            <p className="text-xl text-white/90 font-light">
+              Tu legado, protegido para quienes amas
+            </p>
+            <p className="text-sm text-white/70 italic">
+              Porque hay cosas que no deberían perderse, ni siquiera en tu ausencia.
+            </p>
+          </div>
+
+          <div className="mt-10">
+            <Button
+              onClick={handleLogin}
+              disabled={loading}
+              size="lg"
+              className="w-full py-6 text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg"
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
+                  Conectando...
+                </div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  Ingresar con World ID
+                </div>
+              )}
+            </Button>
+          </div>
+
+          {userId && (
+            <div className="text-green-500 text-sm space-y-1 mt-4">
+              <p>✅ Sesión iniciada</p>
+              <p>ID: {userId}</p>
+              {username && <p>Usuario: {username}</p>}
+              {status && <p>Estado: {status}</p>}
+              {profilePicture && (
+                <Image
+                  src={profilePicture}
+                  alt="Foto de perfil"
+                  width={40}
+                  height={40}
+                  className="rounded-full mx-auto mt-2"
+                />
+              )}
+            </div>
+          )}
+
+          {error && <p className="text-red-500 text-sm mt-2">❌ {error}</p>}
+        </div>
       </main>
 
       <MobileNavbar />
