@@ -22,19 +22,23 @@ const walletAuthInput = (nonce: string): WalletAuthInput => {
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
     setUserId(null);
+    setUsername(null);
+    setStatus(null);
+    setProfilePicture(null);
 
     try {
-      // Paso 1: Obtener nonce
       const res = await fetch("/api/nonce");
       const { nonce } = await res.json();
 
-      // Paso 2: World ID
       const { finalPayload } = await MiniKit.commandsAsync.walletAuth(
         walletAuthInput(nonce)
       );
@@ -44,43 +48,56 @@ export default function Home() {
         return;
       }
 
-      // Paso 3: Validar con backend
+      const worldcoinUser = MiniKit.user;
+
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: finalPayload, nonce }),
+        body: JSON.stringify({
+          payload: finalPayload,
+          nonce,
+          user: {
+            walletAddress: worldcoinUser?.walletAddress,
+            username: worldcoinUser?.username,
+            profilePictureUrl: worldcoinUser?.profilePictureUrl,
+            status: worldcoinUser?.status,
+          },
+        }),
       });
 
       const loginData = await loginRes.json();
-      if (!loginRes.ok) {
+      if (!loginRes.ok || !loginData.user?.id) {
         setError(loginData.error || "Fallo validando con el servidor.");
         return;
       }
 
-      const userWalletId = loginData.user?.id;
-      console.log("🔐 Usuario recibido del backend:", userWalletId);
-
-      if (!userWalletId) {
-        setError("El backend no devolvió el ID del usuario.");
-        return;
-      }
-
-      // Paso 4: Iniciar sesión con NextAuth
       const result = await signIn("credentials", {
         redirect: false,
-        walletAddress: userWalletId,
+        walletAddress: loginData.user.id,
       });
 
       if (result?.ok) {
-        setUserId(userWalletId);
-        console.log("✅ Sesión iniciada con ID:", userWalletId);
+        const { id, username, status, profilePictureUrl } = loginData.user;
+
+        setUserId(id);
+        setUsername(username);
+        setStatus(status);
+        setProfilePicture(profilePictureUrl);
+
+        const storedUser = {
+          id,
+          username,
+          status,
+          profilePictureUrl,
+        };
+
+        localStorage.setItem("certimind_user", JSON.stringify(storedUser));
+        console.log("✅ Usuario guardado en localStorage:", storedUser);
       } else {
         setError("No se pudo iniciar sesión con NextAuth.");
-        console.error("❌ Falló signIn:", result);
       }
     } catch (err: any) {
       setError("Error inesperado: " + err.message);
-      console.error("❌ Error en login:", err);
     } finally {
       setLoading(false);
     }
@@ -120,9 +137,19 @@ export default function Home() {
               </Button>
 
               {userId && (
-                <p className="text-green-600 text-sm">
-                  ✅ Sesión iniciada. ID: {userId}
-                </p>
+                <div className="text-green-600 text-sm mt-2 space-y-1">
+                  <p>✅ Sesión iniciada</p>
+                  <p>ID: {userId}</p>
+                  {username && <p>Usuario: {username}</p>}
+                  {status && <p>Estado: {status}</p>}
+                  {profilePicture && (
+                    <img
+                      src={profilePicture}
+                      alt="Foto de perfil"
+                      className="w-12 h-12 rounded-full mx-auto mt-2"
+                    />
+                  )}
+                </div>
               )}
 
               {error && <p className="text-red-500 text-sm">❌ {error}</p>}
