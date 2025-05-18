@@ -31,6 +31,38 @@ import { Switch } from "@/components/ui/switch";
 import MobileLayout from "@/components/mobile-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { MiniKit } from "@worldcoin/minikit-js";
+import PaymentABI from "@/abi/PaymentABI.json";
+import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
+import { createPublicClient, http, parseUnits } from "viem";
+
+const CONTRACT_ADDRESS = "0x7A90E10E9Efe5F796Be0A429aa846f457e15358D";
+const TOKEN_ADDRESS = "0x163f8c2467924be0ae7b5347228cabf260318753";
+
+const worldchain = {
+  id: 88882,
+  name: "World Chain",
+  network: "worldchain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://worldchain-mainnet.g.alchemy.com/public"],
+    },
+    public: {
+      http: ["https://worldchain-mainnet.g.alchemy.com/public"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Worldchain Explorer",
+      url: "https://worldchain-mainnet.explorer.alchemy.com",
+    },
+  },
+} as const;
 
 export default function HerederoDetailPage({
   params,
@@ -52,6 +84,22 @@ export default function HerederoDetailPage({
   const [incluirVideo, setIncluirVideo] = useState(false);
   const [archivos, setArchivos] = useState<string[]>([]);
   const [isValid, setIsValid] = useState(false);
+  const [transactionId, setTransactionId] = useState<string>("");
+  const [herederos, setHerederos] = useState<any[]>([]);
+  const [swipedId, setSwipedId] = useState<number | null>(null);
+
+  const client = createPublicClient({
+    chain: worldchain,
+    transport: http(),
+  });
+
+  const { isLoading, isSuccess } = useWaitForTransactionReceipt({
+    client,
+    appConfig: {
+      app_id: process.env.APP_ID!,
+    },
+    transactionId,
+  });
 
   useEffect(() => {
     setFadeIn(true);
@@ -130,6 +178,33 @@ export default function HerederoDetailPage({
     setArchivos([...archivos, "Documento_legal.pdf"]);
   };
 
+  const generarContrato = async () => {
+    const releaseTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 días
+
+    try {
+      const value = parseUnits(porcentaje.toString(), 18);
+
+      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+        transaction: [
+          {
+            address: CONTRACT_ADDRESS,
+            abi: PaymentABI,
+            functionName: "schedulePayment",
+            args: [TOKEN_ADDRESS, wallet, value, releaseTime],
+          },
+        ],
+      });
+
+      if (finalPayload.status === "success") {
+        setTransactionId(finalPayload.transaction_id);
+      } else {
+        console.error("Transacción fallida:", finalPayload);
+      }
+    } catch (err) {
+      console.error("Error al generar contrato:", err);
+    }
+  };
+
   return (
     <MobileLayout>
       <div
@@ -174,7 +249,8 @@ export default function HerederoDetailPage({
         <Card className="glassmorphism border-primary/20">
           <CardHeader>
             <CardTitle className="text-lg flex items-center text-secondary">
-              <User className="w-5 h-5 mr-2 text-primary" /> Información de legado
+              <User className="w-5 h-5 mr-2 text-primary" /> Información de
+              legado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -362,7 +438,7 @@ export default function HerederoDetailPage({
                   <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center">
                     <ImageIcon className="h-8 w-8 text-white mb-2" />
                     <p className="text-sm text-white">
-                      Sube fotos para este legado
+                      Sube fotos para este heredero
                     </p>
                     <Button
                       size="sm"
@@ -412,6 +488,26 @@ export default function HerederoDetailPage({
             </Button>
           </CardFooter>
         </Card>
+
+        <div className="pt-6 text-center">
+          <Button
+            onClick={generarContrato}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            Generar Contrato Inteligente
+          </Button>
+        </div>
+
+        {isLoading && (
+          <p className="text-sm text-yellow-400 text-center">
+            ⏳ Confirmando transacción...
+          </p>
+        )}
+        {isSuccess && (
+          <p className="text-sm text-green-400 text-center">
+            ✅ ¡Contrato inteligente generado!
+          </p>
+        )}
       </div>
     </MobileLayout>
   );
