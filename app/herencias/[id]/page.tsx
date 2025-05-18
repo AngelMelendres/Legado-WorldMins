@@ -34,12 +34,12 @@ import { Badge } from "@/components/ui/badge";
 import { MiniKit } from "@worldcoin/minikit-js";
 import PaymentABI from "@/abi/PaymentABI.json";
 import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
-import { createPublicClient, http, parseUnits } from "viem";
+import { createPublicClient, http, parseUnits, custom } from "viem";
 
-const CONTRACT_ADDRESS = "0x7A90E10E9Efe5F796Be0A429aa846f457e15358D";
-const TOKEN_ADDRESS = "0x163f8c2467924be0ae7b5347228cabf260318753";
+const CONTRACT_ADDRESS = "0x6c75aE49Ff1F91898c9b73f847D3E1D1F81C1d72";
+const TOKEN_ADDRESS = "0x813D52B556C0D3856F62d7E5C0BcC7d29eEb7033";
 
-const worldchain = {
+/* const worldchain = {
   id: 88882,
   name: "World Chain",
   network: "worldchain",
@@ -60,6 +60,28 @@ const worldchain = {
     default: {
       name: "Worldchain Explorer",
       url: "https://worldchain-mainnet.explorer.alchemy.com",
+    },
+  },
+} as const; */
+
+const sepoliaTestnet = {
+  id: 11155111,
+  name: "Sepolia Testnet",
+  network: "sepolia",
+  nativeCurrency: {
+    name: "Sepolia ETH",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Etherscan",
+      url: "https://sepolia.etherscan.io",
     },
   },
 } as const;
@@ -88,8 +110,13 @@ export default function HerederoDetailPage({
   const [herederos, setHerederos] = useState<any[]>([]);
   const [swipedId, setSwipedId] = useState<number | null>(null);
 
-  const client = createPublicClient({
+  /*   const client = createPublicClient({
     chain: worldchain,
+    transport: http(),
+  }); */
+
+  const client = createPublicClient({
+    chain: sepoliaTestnet,
     transport: http(),
   });
 
@@ -179,32 +206,35 @@ export default function HerederoDetailPage({
   };
 
   const generarContrato = async () => {
-    const releaseTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 días
-
     try {
-      const value = parseUnits(porcentaje.toString(), 18);
+      if (!window.ethereum) {
+        throw new Error("MetaMask no está instalado.");
+      }
 
-      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            address: CONTRACT_ADDRESS,
-            abi: PaymentABI,
-            functionName: "schedulePayment",
-            args: [TOKEN_ADDRESS, wallet, value, releaseTime],
-          },
-        ],
+      const walletClient = createWalletClient({
+        chain: sepoliaTestnet,
+        transport: custom(window.ethereum),
       });
 
-      if (finalPayload.status === "success") {
-        setTransactionId(finalPayload.transaction_id);
-      } else {
-        console.error("Transacción fallida:", finalPayload);
-      }
+      const [account] = await walletClient.getAddresses();
+
+      const unlockTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+      const amount = parseUnits(porcentaje.toString(), 18);
+
+      const tx = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: PaymentABI,
+        functionName: "schedulePayment",
+        args: [TOKEN_ADDRESS, wallet, amount, unlockTime],
+        account,
+      });
+
+      console.log("Transacción enviada:", tx);
+      setTransactionId(tx); // para mostrar confirmación luego
     } catch (err) {
       console.error("Error al generar contrato:", err);
     }
   };
-
   return (
     <MobileLayout>
       <div
