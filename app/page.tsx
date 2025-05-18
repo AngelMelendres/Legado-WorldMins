@@ -132,7 +132,7 @@ export default function Home() {
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-white">Legacy</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Legado</h1>
 
           <div className="mt-6 space-y-6">
             <p className="text-xl text-white/90 font-light">

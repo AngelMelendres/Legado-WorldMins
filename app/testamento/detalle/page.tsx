@@ -83,7 +83,7 @@ export default function TestamentoDetallePage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="texto" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-4  bg-gray-900">
+              <TabsList className="grid grid-cols-2 mb-4  bg-gray-900">
                 <TabsTrigger
                   value="texto"
                   className="flex items-center text-xs "
@@ -97,20 +97,6 @@ export default function TestamentoDetallePage() {
                 >
                   <FileText className="w-3 h-3 mr-1" />
                   Archivos
-                </TabsTrigger>
-                <TabsTrigger
-                  value="fotos"
-                  className="flex items-center text-xs"
-                >
-                  <ImageIcon className="w-3 h-3 mr-1" />
-                  Fotos
-                </TabsTrigger>
-                <TabsTrigger
-                  value="video"
-                  className="flex items-center text-xs"
-                >
-                  <Film className="w-3 h-3 mr-1" />
-                  Video
                 </TabsTrigger>
               </TabsList>
 

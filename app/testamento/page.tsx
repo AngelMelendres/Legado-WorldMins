@@ -112,7 +112,7 @@ export default function TestamentoPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="texto" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-4  bg-gray-900">
+              <TabsList className="grid grid-cols-2 mb-4  bg-gray-900">
                 <TabsTrigger
                   value="texto"
                   className="flex items-center text-xs "
@@ -125,21 +125,7 @@ export default function TestamentoPage() {
                   className="flex items-center text-xs"
                 >
                   <FileText className="w-3 h-3 mr-1" />
-                  Archivos
-                </TabsTrigger>
-                <TabsTrigger
-                  value="fotos"
-                  className="flex items-center text-xs"
-                >
-                  <ImageIcon className="w-3 h-3 mr-1" />
-                  Fotos
-                </TabsTrigger>
-                <TabsTrigger
-                  value="video"
-                  className="flex items-center text-xs"
-                >
-                  <Film className="w-3 h-3 mr-1" />
-                  Video
+                  Archivo
                 </TabsTrigger>
               </TabsList>
 
@@ -163,10 +149,10 @@ export default function TestamentoPage() {
                   <div className="flex flex-col items-center">
                     <Upload className="h-10 w-10 text-muted-foreground mb-2 text-white" />
                     <h3 className="font-medium text-white">
-                      Sube tus documentos
+                      Sube tu documento
                     </h3>
                     <p className="text-sm text-muted-foreground text-white">
-                      Arrastra y suelta archivos PDF o documentos escaneados
+                      Arrastra y suelta archivo PDF o documento escaneados
                     </p>
                   </div>
 
@@ -181,7 +167,7 @@ export default function TestamentoPage() {
 
                 {archivos.length > 0 && (
                   <div className="space-y-2 mt-4">
-                    <h4 className="text-sm font-medium">Archivos subidos</h4>
+                    <h4 className="text-sm font-medium">Archivo subido</h4>
                     <ul className="space-y-2">
                       {archivos.map((archivo, index) => (
                         <li
@@ -202,43 +188,6 @@ export default function TestamentoPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="fotos" className="space-y-4">
-                <div className="border-2 border-dashed border-primary/20 rounded-lg p-6 text-center space-y-4">
-                  <div className="flex flex-col items-center">
-                    <ImageIcon className="h-10 w-10 text-muted-foreground mb-2 text-white" />
-                    <h3 className="font-medium text-white">
-                      Añade fotografías
-                    </h3>
-                    <p className="text-sm text-muted-foreground text-white">
-                      Incluye imágenes importantes como parte de tu legado
-                    </p>
-                  </div>
-
-                  <Button variant="outline" className="mt-2">
-                    Seleccionar fotos
-                  </Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="video" className="space-y-4">
-                <div className="border-2 border-dashed border-primary/20 rounded-lg p-6 text-center space-y-4">
-                  <div className="flex flex-col items-center">
-                    <Lock className="h-10 w-10 text-muted-foreground mb-2 text-white" />
-                    <h3 className="font-medium text-white">Función Premium</h3>
-                    <p className="text-sm text-muted-foreground text-white">
-                      Activa WLegacy Premium para añadir un video personal como
-                      parte de tu legado.
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="mt-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white hover:from-yellow-600 hover:to-amber-600 border-none"
-                  >
-                    Activar Premium
-                  </Button>
-                </div>
-              </TabsContent>
             </Tabs>
           </CardContent>
           <CardFooter>
