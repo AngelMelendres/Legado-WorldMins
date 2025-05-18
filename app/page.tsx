@@ -5,7 +5,7 @@ import { useState } from "react";
 import { MiniKit, WalletAuthInput } from "@worldcoin/minikit-js";
 import { Button } from "@worldcoin/mini-apps-ui-kit-react";
 import { signIn } from "next-auth/react";
-
+import { useRouter } from "next/router";
 import MobileHeader from "@/components/mobile-header";
 import MobileNavbar from "@/components/mobile-navbar";
 
@@ -26,6 +26,7 @@ export default function Home() {
   const [status, setStatus] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -92,7 +93,7 @@ export default function Home() {
         };
 
         localStorage.setItem("certimind_user", JSON.stringify(storedUser));
-        console.log("✅ Usuario guardado en localStorage:", storedUser);
+        router.push("/pagos"); // redirección después del login
       } else {
         setError("No se pudo iniciar sesión con NextAuth.");
       }
