@@ -1,3 +1,4 @@
+// Este componente muestra la lista de legados y permite generar un contrato inteligente
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,8 +20,38 @@ import MobileLayout from "@/components/mobile-layout";
 import ProgressCircle from "@/components/progress-circle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { MiniKit } from "@worldcoin/minikit-js";
+import PaymentABI from "@/abi/PaymentABI.json";
+import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
+import { createPublicClient, http, parseUnits } from "viem";
 
-// API call will be made from Next.js /api route
+const CONTRACT_ADDRESS = "0x7A90E10E9Efe5F796Be0A429aa846f457e15358D";
+const TOKEN_ADDRESS = "0x163f8c2467924be0ae7b5347228cabf260318753";
+
+const worldchain = {
+  id: 88882,
+  name: "World Chain",
+  network: "worldchain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://worldchain-mainnet.g.alchemy.com/public"],
+    },
+    public: {
+      http: ["https://worldchain-mainnet.g.alchemy.com/public"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Worldchain Explorer",
+      url: "https://worldchain-mainnet.explorer.alchemy.com",
+    },
+  },
+} as const;
 
 export default function HerenciasPage() {
   const router = useRouter();
@@ -28,6 +59,20 @@ export default function HerenciasPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [swipedId, setSwipedId] = useState<number | null>(null);
   const [herederos, setHerederos] = useState<any[]>([]);
+  const [transactionId, setTransactionId] = useState<string>("");
+
+  const client = createPublicClient({
+    chain: worldchain,
+    transport: http(),
+  });
+
+  const { isLoading, isSuccess } = useWaitForTransactionReceipt({
+    client,
+    appConfig: {
+      app_id: process.env.APP_ID!,
+    },
+    transactionId,
+  });
 
   useEffect(() => {
     setFadeIn(true);
@@ -77,6 +122,35 @@ export default function HerenciasPage() {
     (sum, heredero) => sum + heredero.porcentaje,
     0
   );
+
+  const generarContrato = async () => {
+    const releaseTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 días
+
+    for (const heredero of herederos) {
+      try {
+        const value = parseUnits(heredero.porcentaje.toString(), 18);
+
+        const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+          transaction: [
+            {
+              address: CONTRACT_ADDRESS,
+              abi: PaymentABI,
+              functionName: "schedulePayment",
+              args: [TOKEN_ADDRESS, heredero.wallet, value, releaseTime],
+            },
+          ],
+        });
+
+        if (finalPayload.status === "success") {
+          setTransactionId(finalPayload.transaction_id);
+        } else {
+          console.error("Transacción fallida:", finalPayload);
+        }
+      } catch (err) {
+        console.error("Error en transacción individual:", err);
+      }
+    }
+  };
 
   return (
     <MobileLayout>
@@ -245,6 +319,26 @@ export default function HerenciasPage() {
             </div>
           ))}
         </div>
+
+        <div className="pt-6 text-center">
+          <Button
+            onClick={generarContrato}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            Generar Contrato Inteligente
+          </Button>
+        </div>
+
+        {isLoading && (
+          <p className="text-sm text-yellow-400 text-center">
+            ⏳ Confirmando transacción...
+          </p>
+        )}
+        {isSuccess && (
+          <p className="text-sm text-green-400 text-center">
+            ✅ ¡Contrato inteligente generado!
+          </p>
+        )}
 
         <p className="text-xs text-center text-gray-400 text-muted-foreground mt-4">
           Desliza una tarjeta para ver las opciones o toca para expandir

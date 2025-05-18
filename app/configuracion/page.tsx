@@ -10,7 +10,6 @@ import {
   Smartphone,
   Languages,
   HelpCircle,
-  AlertTriangle,
   Sun,
 } from "lucide-react";
 import {
@@ -30,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import MobileLayout from "@/components/mobile-layout";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
@@ -42,28 +40,88 @@ export default function ConfiguracionPage() {
   const [notificacionesActivas, setNotificacionesActivas] = useState(true);
   const [autenticacionDoble, setAutenticacionDoble] = useState(false);
   const [idiomaSeleccionado, setIdiomaSeleccionado] = useState("es");
-  const [nivelSeguridad, setNivelSeguridad] = useState(75);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     setFadeIn(true);
+
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+
+    // Cargar ajustes del usuario
+    const fetchAjustes = async () => {
+      try {
+        const res = await fetch(`/api/ajustes?id_usuario=${localUser.id}`);
+        const data = await res.json();
+
+        if (res.ok && data) {
+          setTiempoVerificacion(
+            data.periodo_inactividad_actual?.toString() || "30"
+          );
+          setNotificacionesActivas(data.notificacion);
+          setAutenticacionDoble(data.dos_factores);
+          setIdiomaSeleccionado(data.idioma || "es");
+          if (data.tema_obscuro) setTheme("dark");
+          else setTheme("light");
+        } else {
+          console.error("Error al obtener ajustes:", data.error);
+        }
+      } catch (error) {
+        console.error("Error cargando ajustes:", error);
+      }
+    };
+
+    fetchAjustes();
   }, []);
 
-  const handleSave = () => {
-    setShowConfetti(true);
-    setTimeout(() => {
-      setShowConfetti(false);
-    }, 3000);
+  const handleSave = async () => {
+    setErrorMsg(null);
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+
+    const payload = {
+      id_usuario: localUser.id,
+      max_periodo_inactividad: 365,
+      periodo_inactividad_actual: parseInt(tiempoVerificacion),
+      notificacion: notificacionesActivas,
+      dos_factores: autenticacionDoble,
+      tema_obscuro: theme === "dark",
+      idioma: idiomaSeleccionado,
+    };
+
+    console.log("📝 Guardando ajustes:", payload);
+
+    try {
+      const res = await fetch("/api/ajustes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("❌ Error al guardar ajustes:", data.error);
+        setErrorMsg(`Error al guardar: ${data.error}`);
+        return;
+      }
+
+      console.log("✅ Ajustes guardados correctamente:", data);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    } catch (error: any) {
+      console.error("❌ Error inesperado:", error);
+      setErrorMsg("Error inesperado al guardar ajustes.");
+    }
   };
 
   const toggleTheme = () => {
-    if (theme === "dark") {
-      setTheme("light");
-    } else {
-      setTheme("dark");
-    }
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   if (!mounted) return null;
@@ -127,7 +185,6 @@ export default function ConfiguracionPage() {
                   {tiempoVerificacion} días
                 </Badge>
               </div>
-
               <Select
                 value={tiempoVerificacion}
                 onValueChange={setTiempoVerificacion}
@@ -145,7 +202,6 @@ export default function ConfiguracionPage() {
                   <SelectItem value="365">365 días</SelectItem>
                 </SelectContent>
               </Select>
-
               <p className="text-xs text-muted-foreground">
                 Si no hay actividad en tu cuenta durante este período, se
                 comenzará el proceso de notificación.
@@ -154,7 +210,7 @@ export default function ConfiguracionPage() {
 
             <div className="pt-2 space-y-2">
               <div className="flex justify-between items-center">
-                <Label htmlFor="tiempo-verificacion" className="text-white">
+                <Label htmlFor="notificaciones" className="text-white">
                   Notificaciones de verificación
                 </Label>
                 <Switch
@@ -194,48 +250,6 @@ export default function ConfiguracionPage() {
                 Añade una capa adicional de seguridad a tu cuenta.
               </p>
             </div>
-
-            <div className="space-y-2 pt-2">
-              <div className="flex justify-between items-center text-white">
-                <Label>Nivel de seguridad</Label>
-                <Badge
-                  variant="outline"
-                  className={`
-                    ${
-                      nivelSeguridad < 40
-                        ? "bg-red-500/20 text-red-400 border-red-500/30"
-                        : nivelSeguridad < 70
-                        ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                        : "bg-green-500/20 text-green-400 border-green-500/30"
-                    }
-                  `}
-                >
-                  {nivelSeguridad < 40
-                    ? "Bajo"
-                    : nivelSeguridad < 70
-                    ? "Medio"
-                    : "Alto"}
-                </Badge>
-              </div>
-              <Slider
-                value={[nivelSeguridad]}
-                min={0}
-                max={100}
-                step={1}
-                disabled
-                className="py-4"
-              />
-
-              {!autenticacionDoble && (
-                <div className="flex items-start space-x-2 p-2 bg-yellow-500/10 rounded-md">
-                  <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-yellow-400">
-                    Activa la autenticación de dos factores para aumentar tu
-                    nivel de seguridad.
-                  </p>
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
@@ -248,7 +262,7 @@ export default function ConfiguracionPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="flex justify-between items-cente text-white">
+              <div className="flex justify-between items-center text-white">
                 <Label htmlFor="tema-oscuro" className="flex items-center">
                   {theme === "dark" ? (
                     <Moon className="w-4 h-4 mr-2" />
@@ -291,16 +305,18 @@ export default function ConfiguracionPage() {
         <div className="space-y-4 mt-6">
           <Button
             variant="outline"
-            className="w-full flex items-center justify-between  bg-black text-white border-none"
+            className="w-full flex items-center justify-between bg-black text-white border-none"
             size="lg"
           >
             <div className="flex items-center w-full bg-black text-white border-none">
-              <HelpCircle className="w-4 h-4 mr-2w-full" />
+              <HelpCircle className="w-4 h-4 mr-2" />
               <span>Centro de ayuda</span>
             </div>
             <ChevronRight className="w-4 h-4" />
           </Button>
-
+          {errorMsg && (
+            <p className="text-red-500 text-sm text-center mt-2">{errorMsg}</p>
+          )}
           <Button
             onClick={handleSave}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
