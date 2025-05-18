@@ -1,3 +1,4 @@
+// Este componente reemplaza el contenido anterior e incluye guardado/actualización de herencia vía /api/herencias
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,12 +38,14 @@ export default function HerederoDetailPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const isNewHeredero = params.id === "nuevo";
+
   const [fadeIn, setFadeIn] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [porcentaje, setPorcentaje] = useState(25);
-  const [nombre, setNombre] = useState("");
+  const [titulo, setTitulo] = useState("");
   const [wallet, setWallet] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [porcentaje, setPorcentaje] = useState(25);
   const [incluirMensaje, setIncluirMensaje] = useState(false);
   const [incluirArchivos, setIncluirArchivos] = useState(false);
   const [incluirFotos, setIncluirFotos] = useState(false);
@@ -50,31 +53,72 @@ export default function HerederoDetailPage({
   const [archivos, setArchivos] = useState<string[]>([]);
   const [isValid, setIsValid] = useState(false);
 
-  const isNewHeredero = params.id === "nuevo";
-
   useEffect(() => {
     setFadeIn(true);
-
-    // Si no es un nuevo heredero, cargar datos
     if (!isNewHeredero) {
-      // Simulación de carga de datos
-      setNombre("María García");
-      setWallet("0x71C7656EC7ab88b098defB751B7401B5f6d8976F");
-      setPorcentaje(40);
-      setIncluirMensaje(true);
-      setIncluirArchivos(true);
-      setMensaje(
-        "Querida María, este es mi legado para ti. Espero que lo utilices sabiamente y recuerdes siempre los buenos momentos que compartimos."
-      );
+      const fetchData = async () => {
+        try {
+          const res = await fetch(`/api/herencias/get?id=${params.id}`);
+          const data = await res.json();
+          setTitulo(data.titulo);
+          setWallet(data.walletId);
+          setPorcentaje(data.porcentaje_asignado);
+          setMensaje(data.descripcion);
+          setIncluirMensaje(data.tipo_media?.includes("mensaje"));
+          setIncluirArchivos(data.tipo_media?.includes("archivos"));
+          setIncluirFotos(data.tipo_media?.includes("fotos"));
+          setIncluirVideo(data.tipo_media?.includes("video"));
+        } catch (err) {
+          console.error("Error al cargar la herencia:", err);
+        }
+      };
+      fetchData();
     }
-  }, [isNewHeredero]);
+  }, [isNewHeredero, params.id]);
 
   useEffect(() => {
-    // Validación simple
-    setIsValid(nombre.length > 0 && wallet.length > 0);
-  }, [nombre, wallet]);
+    setIsValid(titulo.trim().length > 0 && wallet.trim().length > 0);
+  }, [titulo, wallet]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+
+    const payload = {
+      ...(isNewHeredero ? {} : { id: parseInt(params.id) }),
+      titulo,
+      walletId: wallet,
+      porcentaje_asignado: porcentaje,
+      descripcion: mensaje,
+      tipo_media: [
+        incluirMensaje && "mensaje",
+        incluirArchivos && "archivos",
+        incluirFotos && "fotos",
+        incluirVideo && "video",
+      ]
+        .filter(Boolean)
+        .join(","),
+      incluye_media:
+        incluirMensaje || incluirArchivos || incluirFotos || incluirVideo,
+      id_usuario: localUser.id,
+    };
+
+    console.log("Payload enviado al API:", payload);
+
+    const res = await fetch("/api/herencias/post_put", {
+      method: isNewHeredero ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Error guardando herencia:", data.error);
+      return;
+    }
+
     setShowConfetti(true);
     setTimeout(() => {
       setShowConfetti(false);
@@ -83,7 +127,6 @@ export default function HerederoDetailPage({
   };
 
   const handleFileUpload = () => {
-    // Simulación de carga de archivo
     setArchivos([...archivos, "Documento_legal.pdf"]);
   };
 
@@ -104,7 +147,7 @@ export default function HerederoDetailPage({
             <ArrowLeft className="h-4 w-4 text-white" />
           </Button>
           <h1 className="text-xl font-bold tracking-tight text-white">
-            {isNewHeredero ? "Nuevo heredero" : "Editar heredero"}
+            {isNewHeredero ? "Nuevo Legado" : "Editar Legado"}
           </h1>
         </div>
 
@@ -130,31 +173,30 @@ export default function HerederoDetailPage({
 
         <Card className="glassmorphism border-primary/20">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center text-secondary ">
-              <User className="w-5 h-5 mr-2 text-primary" />
-              Información del heredero
+            <CardTitle className="text-lg flex items-center text-secondary">
+              <User className="w-5 h-5 mr-2 text-primary" /> Información de legado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex justify-center mb-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src="/placeholder.svg" />
+                <AvatarImage src="https://static.vecteezy.com/system/resources/thumbnails/021/468/808/small_2x/happy-friends-posing-together-png.png" />
                 <AvatarFallback className="bg-primary/20 text-xl">
-                  {nombre ? nombre.charAt(0).toUpperCase() : "?"}
+                  {titulo ? titulo.charAt(0).toUpperCase() : "?"}
                 </AvatarFallback>
               </Avatar>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre" className="text-white">
-                  Nombre completo
+                <Label htmlFor="titulo" className="text-white">
+                  Titulo del legado
                 </Label>
                 <Input
-                  id="nombre"
-                  placeholder="Nombre del heredero"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                  id="titulo"
+                  placeholder="Titulo de la herencia"
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
                   className="bg-gray-900/80 border-none text-gray-300"
                 />
               </div>
@@ -164,8 +206,8 @@ export default function HerederoDetailPage({
                   htmlFor="wallet"
                   className="flex items-center text-white"
                 >
-                  <Wallet className="w-4 h-4 mr-2 text-white" />
-                  Dirección de wallet
+                  <Wallet className="w-4 h-4 mr-2 text-white" /> Dirección de
+                  wallet
                 </Label>
                 <Input
                   id="wallet"
@@ -208,72 +250,51 @@ export default function HerederoDetailPage({
         <Card className="glassmorphism border-primary/20 mt-6">
           <CardHeader>
             <CardTitle className="text-lg flex items-center text-secondary">
-              <FileText className="w-5 h-5 mr-2 text-primary" />
-              Testamento para este heredero
+              <FileText className="w-5 h-5 mr-2 text-primary" /> Testamento para
+              este legado
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="mensaje" className="w-full bg">
-              <TabsList className="grid grid-cols-4 mb-4  rounded-lg bg-gray-900">
-                <TabsTrigger
-                  value="mensaje"
-                  className="flex items-center text-xs "
-                >
+            <div className="flex items-center justify-between text-white mb-4">
+              <Label htmlFor="incluir-mensaje" className="flex items-center">
+                Incluir mensaje personal
+              </Label>
+              <Switch
+                id="incluir-mensaje"
+                checked={incluirMensaje}
+                onCheckedChange={setIncluirMensaje}
+              />
+            </div>
+            <Tabs defaultValue="mensaje" className="w-full">
+              <TabsList className="grid grid-cols-4 mb-4 rounded-lg bg-gray-900">
+                <TabsTrigger value="mensaje" className="text-xs">
                   <MessageCircle className="w-3 h-3 mr-1" />
                   Mensaje
                 </TabsTrigger>
-                <TabsTrigger
-                  value="archivos"
-                  className="fl`ex items-center text-xs"
-                >
+                <TabsTrigger value="archivos" className="text-xs">
                   <FileText className="w-3 h-3 mr-1" />
                   Archivos
                 </TabsTrigger>
-                <TabsTrigger
-                  value="fotos"
-                  className="flex items-center text-xs"
-                >
+                <TabsTrigger value="fotos" className="text-xs">
                   <ImageIcon className="w-3 h-3 mr-1" />
                   Fotos
                 </TabsTrigger>
-                <TabsTrigger
-                  value="video"
-                  className="flex items-center text-xs"
-                >
+                <TabsTrigger value="video" className="text-xs">
                   <Video className="w-3 h-3 mr-1" />
                   Video
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="mensaje" className="space-y-4">
-                <div className="flex items-center text-secondary justify-between">
-                  <Label
-                    htmlFor="incluir-mensaje"
-                    className="flex items-center"
-                  >
-                    Incluir mensaje personal
-                  </Label>
-                  <Switch
-                    id="incluir-mensaje"
-                    checked={incluirMensaje}
-                    onCheckedChange={setIncluirMensaje}
-                  />
-                </div>
-
                 {incluirMensaje && (
                   <>
                     <Textarea
-                      placeholder="Escribe un mensaje personal para este heredero..."
+                      placeholder="Escribe un mensaje personal..."
                       value={mensaje}
                       onChange={(e) => setMensaje(e.target.value)}
-                      className="min-h-[150px] border-none bg-black/50 font-light"
-                      style={{
-                        fontFamily: "Georgia, serif",
-                        color: "white",
-                        // Esto afecta al placeholder solo si usas Tailwind/Next UI personalizado o globales CSS
-                      }}
+                      className="min-h-[150px] border-none bg-black/50 font-light text-white"
+                      style={{ fontFamily: "Georgia, serif" }}
                     />
-
                     <p className="text-xs text-muted-foreground text-secundary">
                       Este mensaje será entregado al heredero cuando se active
                       tu legado.
@@ -283,90 +304,69 @@ export default function HerederoDetailPage({
               </TabsContent>
 
               <TabsContent value="archivos" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor="incluir-archivos"
-                    className="flex items-center  text-white"
-                  >
-                    Incluir archivos
-                  </Label>
+                <div className="flex items-center justify-between text-white">
+                  <Label htmlFor="incluir-archivos">Incluir archivos</Label>
                   <Switch
                     id="incluir-archivos"
                     checked={incluirArchivos}
                     onCheckedChange={setIncluirArchivos}
                   />
                 </div>
-
                 {incluirArchivos && (
                   <>
                     <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center space-y-2">
-                      <div className="flex flex-col items-center">
-                        <FileText className="h-8 w-8 text-muted-foreground mb-2  text-white" />
-                        <p className="text-sm  text-white">
-                          Sube documentos para este heredero
-                        </p>
-                      </div>
-
+                      <FileText className="h-8 w-8 text-white mb-2" />
+                      <p className="text-sm text-white">
+                        Sube documentos para este legado
+                      </p>
                       <Button
                         onClick={handleFileUpload}
                         size="sm"
-                        className="mt-2 bg-black text-white hover:bg-black/90 border-none"
+                        className="mt-2 bg-black text-white hover:bg-black/90"
                       >
                         Seleccionar archivo
                       </Button>
                     </div>
-
                     {archivos.length > 0 && (
-                      <div className="space-y-2 mt-2">
-                        <h4 className="text-sm font-medium">
-                          Archivos subidos
-                        </h4>
-                        <ul className="space-y-2">
-                          {archivos.map((archivo, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center justify-between p-2 bg-primary/5 rounded-md"
-                            >
-                              <div className="flex items-center">
-                                <FileText className="h-4 w-4 mr-2 text-primary" />
-                                <span className="text-sm">{archivo}</span>
-                              </div>
-                              <Badge variant="outline" className="text-xs">
-                                PDF
-                              </Badge>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      <ul className="space-y-2 mt-2">
+                        {archivos.map((archivo, index) => (
+                          <li
+                            key={index}
+                            className="flex justify-between items-center bg-primary/5 p-2 rounded-md"
+                          >
+                            <span className="flex items-center">
+                              <FileText className="h-4 w-4 mr-2 text-primary" />
+                              {archivo}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              PDF
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </>
                 )}
               </TabsContent>
 
               <TabsContent value="fotos" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="incluir-fotos" className="flex items-center  text-white">
-                    Incluir fotografías
-                  </Label>
+                <div className="flex items-center justify-between text-white">
+                  <Label htmlFor="incluir-fotos">Incluir fotografías</Label>
                   <Switch
                     id="incluir-fotos"
                     checked={incluirFotos}
                     onCheckedChange={setIncluirFotos}
                   />
                 </div>
-
                 {incluirFotos && (
-                  <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center space-y-2">
-                    <div className="flex flex-col items-center">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground mb-2  text-white" />
-                      <p className="text-sm  text-white">
-                        Sube fotografías para este heredero
-                      </p>
-                    </div>
-
+                  <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center">
+                    <ImageIcon className="h-8 w-8 text-white mb-2" />
+                    <p className="text-sm text-white">
+                      Sube fotos para este legado
+                    </p>
                     <Button
                       size="sm"
-                      className="mt-2 bg-black text-white hover:bg-black/90 border-none"
+                      className="mt-2 bg-black text-white hover:bg-black/90"
                     >
                       Seleccionar fotos
                     </Button>
@@ -375,37 +375,30 @@ export default function HerederoDetailPage({
               </TabsContent>
 
               <TabsContent value="video" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="incluir-video" className="flex items-center  text-white">
-                    Incluir video personal
-                  </Label>
+                <div className="flex items-center justify-between text-white">
+                  <Label htmlFor="incluir-video">Incluir video personal</Label>
                   <Switch
                     id="incluir-video"
                     checked={incluirVideo}
                     onCheckedChange={setIncluirVideo}
                   />
                 </div>
-
-                {incluirVideo ? (
-                  <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center space-y-2">
-                    <div className="flex flex-col items-center">
-                      <Lock className="h-8 w-8 text-muted-foreground mb-2  text-white" />
-                      <h3 className="font-medium  text-white">Función Premium</h3>
-                      <p className="text-xs text-muted-foreground  text-white">
-                        Activa WLegacy Premium para añadir un video personal
-                        para este heredero.
-                      </p>
-                    </div>
-
+                {incluirVideo && (
+                  <div className="border-2 border-dashed border-primary/20 rounded-lg p-4 text-center">
+                    <Lock className="h-8 w-8 text-white mb-2" />
+                    <h3 className="font-medium text-white">Función Premium</h3>
+                    <p className="text-xs text-white">
+                      Activa Premium para añadir un video personal.
+                    </p>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="mt-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white hover:from-yellow-600 hover:to-amber-600 border-none"
+                      className="mt-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white hover:from-yellow-600 hover:to-amber-600"
                     >
                       Activar Premium
                     </Button>
                   </div>
-                ) : null}
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -415,8 +408,7 @@ export default function HerederoDetailPage({
               disabled={!isValid}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              <Save className="mr-2 h-4 w-4" />
-              Guardar cambios
+              <Save className="mr-2 h-4 w-4" /> Guardar cambios
             </Button>
           </CardFooter>
         </Card>

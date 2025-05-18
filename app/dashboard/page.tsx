@@ -24,18 +24,31 @@ export default function Dashboard() {
   const [fadeIn, setFadeIn] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const [tooltipData, setTooltipData] = useState({
     x: 0,
     y: 0,
     value: 0,
     date: "",
   });
+  const [priceHistory, setPriceHistory] = useState<[number, number][]>([]);
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
+  const [wrcGlobal, setWrcGlobal] = useState<{
+    price: number;
+    marketCap: number;
+    supply: number;
+    change24h: number;
+  } | null>(null);
   useEffect(() => {
     setMounted(true);
     setFadeIn(true);
+
+    const userData = localStorage.getItem("certimind_user");
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      setUsername(parsed.username || null);
+    }
 
     // Simulación de interacción con el gráfico
     const handleChartInteraction = (e: MouseEvent) => {
@@ -87,6 +100,70 @@ export default function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchWRCGlobalData = async () => {
+      try {
+        const res = await fetch(
+          "https://api.coingecko.com/api/v3/coins/worldcoin"
+        );
+        const data = await res.json();
+        setWrcGlobal({
+          price: data.market_data.current_price.usd,
+          marketCap: data.market_data.market_cap.usd,
+          supply: data.market_data.circulating_supply,
+          change24h: data.market_data.price_change_percentage_24h,
+        });
+      } catch (error) {
+        console.error("Error al obtener datos de Worldcoin:", error);
+      }
+    };
+
+    fetchWRCGlobalData();
+  }, []);
+
+  useEffect(() => {
+    const fetchPriceHistory = async () => {
+      try {
+        const res = await fetch(
+          "https://api.coingecko.com/api/v3/coins/worldcoin/market_chart?vs_currency=usd&days=30"
+        );
+        const data = await res.json();
+        setPriceHistory(data.prices); // [timestamp, price]
+      } catch (err) {
+        console.error("Error al obtener precios históricos:", err);
+      }
+    };
+
+    fetchPriceHistory();
+  }, []);
+
+  function generatePath(
+    data: [number, number][],
+    width: number,
+    height: number,
+    isFill = false
+  ): string {
+    const maxPrice = Math.max(...data.map(([_, price]) => price));
+    const minPrice = Math.min(...data.map(([_, price]) => price));
+    const priceRange = maxPrice - minPrice || 1;
+
+    const stepX = width / (data.length - 1);
+
+    const path = data
+      .map(([_, price], i) => {
+        const x = i * stepX;
+        const y = height - ((price - minPrice) / priceRange) * height;
+        return `${i === 0 ? "M" : "L"}${x},${y}`;
+      })
+      .join(" ");
+
+    if (isFill) {
+      return `${path} L${width},${height} L0,${height} Z`;
+    }
+
+    return path;
+  }
+
   if (!mounted) return null;
 
   return (
@@ -98,33 +175,68 @@ export default function Dashboard() {
       >
         <div className="space-y-2">
           <h1 className="text-2xl  text-white font-bold tracking-tight">
-            Hola, Edison 👋
+            Hola, {username ?? "usuario"} 👋
           </h1>
           <p className="text-muted-foreground text-gray-400">
             Tu legado está en buenas manos.
           </p>
         </div>
 
+        {wrcGlobal && (
+          <Card className="glassmorphism border-primary/20 text-center py-6 px-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-3xl font-bold text-white">
+                ${wrcGlobal.price.toFixed(2)}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p className="text-sm text-muted-foreground text-gray-400">
+                Precio actual de Worldcoin (WRC)
+              </p>
+              <p className="text-xs text-muted-foreground text-gray-500">
+                Equivale a {wrcGlobal.price.toFixed(2)} USDT
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="asset-card mb-6">
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center">
               <Wallet className="w-5 h-5 mr-2 text-primary" />
-              <span className="font-medium  text-white">Balance de Worchain</span>
+              <span className="font-medium  text-white">
+                Balance de Worchain
+              </span>
             </div>
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
 
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold text-white">2.45 WRC</h3>
-              <p className="text-sm text-muted-foreground text-gray-400">≈ $1,225.00 USD</p>
+              <h3 className="text-2xl font-bold text-white">
+                {wrcGlobal ? wrcGlobal.supply.toLocaleString() : "Cargando..."}{" "}
+                WRC
+              </h3>
+              <p className="text-sm text-muted-foreground text-gray-400">
+                ≈{" "}
+                {wrcGlobal
+                  ? `$${wrcGlobal.marketCap.toLocaleString()} USD de market cap`
+                  : ""}
+              </p>
             </div>
-            <Badge
-              variant="outline"
-              className="bg-green-500/20 text-green-400 border-green-500/30"
-            >
-              +5.2%
-            </Badge>
+            {wrcGlobal && (
+              <Badge
+                variant="outline"
+                className={`border ${
+                  wrcGlobal.change24h >= 0
+                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                    : "bg-red-500/20 text-red-400 border-red-500/30"
+                }`}
+              >
+                {wrcGlobal.change24h >= 0 ? "+" : ""}
+                {wrcGlobal.change24h.toFixed(2)}%
+              </Badge>
+            )}
           </div>
 
           <div className="mt-4 chart-container" ref={chartRef}>
@@ -200,24 +312,20 @@ export default function Dashboard() {
               />
 
               {/* Área del gráfico */}
-              <path
-                d={`M0,${90 - Math.sin(0) * 40} ${Array.from(
-                  { length: 400 },
-                  (_, i) => `L${i},${90 - Math.sin(i / 30) * 40}`
-                ).join(" ")}`}
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="2"
-              />
-
-              {/* Área bajo la curva */}
-              <path
-                d={`M0,${90 - Math.sin(0) * 40} ${Array.from(
-                  { length: 400 },
-                  (_, i) => `L${i},${90 - Math.sin(i / 30) * 40}`
-                ).join(" ")} L400,180 L0,180 Z`}
-                fill="url(#chartGradient)"
-              />
+              {priceHistory.length > 0 && (
+                <>
+                  <path
+                    d={generatePath(priceHistory, 400, 180)}
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d={generatePath(priceHistory, 400, 180, true)}
+                    fill="url(#chartGradient)"
+                  />
+                </>
+              )}
             </svg>
 
             {/* Etiquetas de tiempo */}
@@ -258,7 +366,9 @@ export default function Dashboard() {
             <div className="flex justify-between items-center">
               <div className="flex items-center">
                 <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span className="text-sm text-white">Tiempo de verificación</span>
+                <span className="text-sm text-white">
+                  Tiempo de verificación
+                </span>
               </div>
               <span className="text-sm text-white">30 días</span>
             </div>
@@ -293,7 +403,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-
         <div className="grid grid-cols-2 gap-4 mt-6">
           <Card
             className="glassmorphism hover:bg-primary/5 transition-all cursor-pointer border-primary/20"
@@ -304,7 +413,9 @@ export default function Dashboard() {
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
               <h3 className="font-medium text-white">Mis Herencias</h3>
-              <p className="text-xs text-muted-foreground mt-1 text-gray-400">3 herederos</p>
+              <p className="text-xs text-muted-foreground mt-1 text-gray-400">
+                3 herederos
+              </p>
             </CardContent>
           </Card>
 
