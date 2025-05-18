@@ -100,7 +100,7 @@ export default function Home() {
           JSON.stringify({ id, username, status, profilePictureUrl })
         );
 
-        router.push("/dashboard"); 
+        router.push("/dashboard");
       } else {
         setError("No se pudo iniciar sesión con NextAuth.");
       }
@@ -123,23 +123,30 @@ export default function Home() {
         >
           <div className="flex justify-center">
             <div className="relative w-24 h-24 mb-6">
+            
               <div className="absolute inset-0 flex items-center justify-center">
-                <Infinity className="w-16 h-16 text-primary animate-pulse" />
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Heart className="w-10 h-10 text-white opacity-80" />
+                <Image
+                  src="/LogFinal.png"
+                  alt="Logo CertiMind"
+                  width={67}
+                  height={67}
+                  className="rounded-full"
+                />
               </div>
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-white">Legado</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Legado
+          </h1>
 
           <div className="mt-6 space-y-6">
             <p className="text-xl text-white/90 font-light">
               Tu legado, protegido para quienes amas
             </p>
             <p className="text-sm text-white/70 italic">
-              Porque hay cosas que no deberían perderse, ni siquiera en tu ausencia.
+              Porque hay cosas que no deberían perderse, ni siquiera en tu
+              ausencia.
             </p>
           </div>
 
