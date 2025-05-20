@@ -77,7 +77,7 @@ export default function HerederoDetailPage({
   const [titulo, setTitulo] = useState("");
   const [wallet, setWallet] = useState("");
   const [mensaje, setMensaje] = useState("");
-  const [porcentaje, setPorcentaje] = useState(25);
+  const [porcentaje, setPorcentaje] = useState(0);
   const [incluirMensaje, setIncluirMensaje] = useState(false);
   const [incluirArchivos, setIncluirArchivos] = useState(false);
   const [incluirFotos, setIncluirFotos] = useState(false);
@@ -159,7 +159,6 @@ export default function HerederoDetailPage({
       return false;
     }
   };
-
   const fetchPorcentajeTotal = async () => {
     console.log("fetchPorcentajeTotal");
     try {
@@ -168,28 +167,25 @@ export default function HerederoDetailPage({
       );
       if (!localUser.id) return;
 
-      const res = await fetch("/api/herencias", {
+      const res = await fetch("/api/herencias/porcentaje-total", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_usuario: localUser.id }),
       });
 
       const data = await res.json();
-      if (!Array.isArray(data)) {
-        console.warn("La respuesta de herencias no es un arreglo:", data);
+      if (!res.ok || typeof data.porcentaje_total !== "number") {
+        console.warn("Respuesta inválida al obtener porcentaje total:", data);
         return;
       }
 
-      // Usamos `porcentaje_asignado` o `porcentaje`
-      let total = data.reduce((acc: number, h: any) => {
-        const valor = h.porcentaje_asignado ?? h.porcentaje ?? 0;
-        return acc + Number(valor);
-      }, 0);
+      let total = data.porcentaje_total;
 
+      // Si estás editando un heredero existente, réstale su valor actual
       if (!isNewHeredero) {
-        const actual = data.find((h: any) => h.id === parseInt(params.id));
-        const actualValue =
-          actual?.porcentaje_asignado ?? actual?.porcentaje ?? 0;
+        const resHeredero = await fetch(`/api/herencias/get?id=${params.id}`);
+        const actual = await resHeredero.json();
+        const actualValue = actual?.porcentaje_asignado ?? 0;
         total -= Number(actualValue);
       }
 
