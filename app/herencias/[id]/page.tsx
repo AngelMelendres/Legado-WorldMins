@@ -87,6 +87,7 @@ export default function HerederoDetailPage({
   const [transactionId, setTransactionId] = useState<string>("");
   const [herederos, setHerederos] = useState<any[]>([]);
   const [swipedId, setSwipedId] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const client = createPublicClient({
     chain: worldchain,
@@ -124,9 +125,23 @@ export default function HerederoDetailPage({
     }
   }, [isNewHeredero, params.id]);
 
-  useEffect(() => {
-    setIsValid(titulo.trim().length > 0 && wallet.trim().length > 0);
-  }, [titulo, wallet]);
+  const validarWallet = async (address: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/verify-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = await res.json();
+      return data.valid;
+    } catch (error) {
+      console.error("Error al validar la wallet:", error);
+      return false;
+    }
+  };
+
+
+  
 
   const handleSave = async () => {
     const localUser = JSON.parse(
@@ -204,6 +219,13 @@ export default function HerederoDetailPage({
       console.error("Error al generar contrato:", err);
     }
   };
+
+  const puedeGuardar =
+    titulo.trim().length > 0 &&
+    wallet.trim().length > 0 &&
+    porcentaje > 0 &&
+    isValid &&
+    !isVerifying;
 
   return (
     <MobileLayout>
@@ -285,6 +307,7 @@ export default function HerederoDetailPage({
                   <Wallet className="w-4 h-4 mr-2 text-white" /> Dirección de
                   wallet
                 </Label>
+
                 <Input
                   id="wallet"
                   placeholder="0x..."
@@ -292,9 +315,16 @@ export default function HerederoDetailPage({
                   onChange={(e) => setWallet(e.target.value)}
                   className="bg-gray-900/80 border-none text-gray-300 text-sm"
                 />
-                {wallet && (
-                  <p className="text-xs text-muted-foreground mt-1 text-gray-400">
-                    La wallet debe ser compatible con World App
+
+                {wallet && !isVerifying && !isValid && (
+                  <p className="text-xs mt-1 text-red-400">
+                    Wallet inválida. Asegúrate de que sea una dirección válida.
+                  </p>
+                )}
+
+                {isVerifying && (
+                  <p className="text-xs mt-1 text-yellow-400">
+                    Verificando wallet...
                   </p>
                 )}
               </div>
@@ -481,7 +511,7 @@ export default function HerederoDetailPage({
           <CardFooter>
             <Button
               onClick={handleSave}
-              disabled={!isValid}
+              disabled={!puedeGuardar}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               <Save className="mr-2 h-4 w-4" /> Guardar cambios
