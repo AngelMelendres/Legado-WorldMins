@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle,
@@ -11,13 +11,52 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import MobileLayout from "@/components/mobile-layout";
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
+
+const WLD_CONTRACT = "0x163f8c2467924be0ae7b5347228cabf260318753";
+
+const getWLDPriceInUSD = async (): Promise<number> => {
+  const res = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=worldcoin-wld&vs_currencies=usd"
+  );
+  const data = await res.json();
+  return data["worldcoin-wld"].usd;
+};
+
+const getWLDBalance = async (walletAddress: string): Promise<number> => {
+  const client = createPublicClient({
+    chain: mainnet,
+    transport: http(),
+  });
+
+  const balance = await client.readContract({
+    address: WLD_CONTRACT,
+    abi: [
+      {
+        constant: true,
+        inputs: [{ name: "_owner", type: "address" }],
+        name: "balanceOf",
+        outputs: [{ name: "balance", type: "uint256" }],
+        type: "function",
+      },
+    ],
+    functionName: "balanceOf",
+    args: [walletAddress],
+  });
+
+  return Number(balance) / 1e18;
+};
 
 export default function Legados() {
   const router = useRouter();
   const [fadeIn, setFadeIn] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
-  const [legacyProgress, setLegacyProgress] = useState(50); // porcentaje dinámico
+  const [legacyProgress, setLegacyProgress] = useState(0);
   const [mounted, setMounted] = useState(false);
+
+  const [balance, setBalance] = useState(0);
+  const [balanceUSD, setBalanceUSD] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -27,6 +66,43 @@ export default function Legados() {
     if (userData) {
       const parsed = JSON.parse(userData);
       setUsername(parsed.username || null);
+
+      const fetchData = async () => {
+        try {
+          const wldBalance = await getWLDBalance(parsed.walletAddress);
+          const usdPrice = await getWLDPriceInUSD();
+          setBalance(wldBalance);
+          setBalanceUSD(wldBalance * usdPrice);
+        } catch (err) {
+          console.error("Error al obtener balance o precio:", err);
+        }
+      };
+
+      const fetchLegacyPercentage = async () => {
+        try {
+          const res = await fetch("/api/herencias", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_usuario: parsed.id }),
+          });
+
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            const total = data.reduce(
+              (sum, item) => sum + (item.porcentaje || 0),
+              0
+            );
+            setLegacyProgress(total);
+          } else {
+            console.warn("La respuesta no es un arreglo:", data);
+          }
+        } catch (error) {
+          console.error("Error al obtener porcentaje legado:", error);
+        }
+      };
+
+      fetchData();
+      fetchLegacyPercentage();
     }
   }, []);
 
@@ -40,7 +116,7 @@ export default function Legados() {
         }`}
       >
         <div className="space-y-2">
-          <h1 className="text-2xl  text-white font-bold tracking-tight">
+          <h1 className="text-2xl text-white font-bold tracking-tight">
             Hola, {username ?? "usuario"} 👋
           </h1>
           <p className="text-muted-foreground text-gray-400">
@@ -51,15 +127,15 @@ export default function Legados() {
         <Card className="glassmorphism border-primary/20 text-center py-6 px-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-3xl font-bold text-white">
-              🪙 0.00
+              🪙 {balance.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <p className="text-sm text-muted-foreground text-gray-400">
-              Actualmente tienes (WRC)
+              Actualmente tienes (WLD)
             </p>
             <p className="text-xs text-muted-foreground text-gray-500 mt-4">
-              Equivale a 0 $ USD
+              Equivale a {balanceUSD.toFixed(2)} $ USD
             </p>
           </CardContent>
         </Card>
@@ -75,7 +151,7 @@ export default function Legados() {
             <div className="flex justify-between items-center">
               <div className="flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2 text-yellow-500" />
-                <span className="text-sm text-white">Ultima conexión</span>
+                <span className="text-sm text-white">Última conexión</span>
               </div>
               <span className="text-sm text-white">Hace 2 días</span>
             </div>

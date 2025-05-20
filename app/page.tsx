@@ -95,7 +95,13 @@ export default function Home() {
 
         localStorage.setItem(
           "certimind_user",
-          JSON.stringify({ id, username, status, profilePictureUrl })
+          JSON.stringify({
+            id,
+            username,
+            status,
+            profilePictureUrl,
+            walletAddress: worldcoinUser?.walletAddress, 
+          })
         );
 
         router.push("/inicio");
