@@ -27,9 +27,12 @@ JWT_SECRET="DevMinsMiniApp"
 
 
 
+
 PRIVATE_KEY=tu_clave_privada
 SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/tu-proyecto
 OP_MAINNET_RPC_URL=https://mainnet.optimism.io
+
+
 
 
 NEXT_PUBLIC_SUPABASE_URL=https://nyrhvgqpozaqnbkswszr.supabase.co

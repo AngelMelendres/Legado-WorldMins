@@ -86,6 +86,8 @@ export default function HerederoDetailPage({
   const [isValid, setIsValid] = useState(false);
   const [transactionId, setTransactionId] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [porcentajeTotalAsignado, setPorcentajeTotalAsignado] = useState(0);
+  const [maxDisponible, setMaxDisponible] = useState(100);
 
   const client = createPublicClient({
     chain: worldchain,
@@ -107,6 +109,8 @@ export default function HerederoDetailPage({
         try {
           const res = await fetch(`/api/herencias/get?id=${params.id}`);
           const data = await res.json();
+
+          console.log("Datos de la herencia:", data);
           setTitulo(data.titulo);
           setWallet(data.walletId);
           setPorcentaje(data.porcentaje_asignado);
@@ -119,9 +123,27 @@ export default function HerederoDetailPage({
           console.error("Error al cargar la herencia:", err);
         }
       };
+
       fetchData();
     }
+
+    fetchPorcentajeTotal();
   }, [isNewHeredero, params.id]);
+
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      if (wallet && wallet.startsWith("0x") && wallet.length === 42) {
+        setIsVerifying(true);
+        const valid = await validarWallet(wallet);
+        setIsValid(valid);
+        setIsVerifying(false);
+      } else {
+        setIsValid(false);
+      }
+    }, 500); // Delay para evitar validaciones en cada tecla
+
+    return () => clearTimeout(timeout);
+  }, [wallet]);
 
   const validarWallet = async (address: string): Promise<boolean> => {
     try {
@@ -138,8 +160,48 @@ export default function HerederoDetailPage({
     }
   };
 
+  const fetchPorcentajeTotal = async () => {
+    console.log("fetchPorcentajeTotal");
+    try {
+      const localUser = JSON.parse(
+        localStorage.getItem("certimind_user") || "{}"
+      );
+      if (!localUser.id) return;
 
-  
+      const res = await fetch("/api/herencias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: localUser.id }),
+      });
+
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        console.warn("La respuesta de herencias no es un arreglo:", data);
+        return;
+      }
+
+      // Usamos `porcentaje_asignado` o `porcentaje`
+      let total = data.reduce((acc: number, h: any) => {
+        const valor = h.porcentaje_asignado ?? h.porcentaje ?? 0;
+        return acc + Number(valor);
+      }, 0);
+
+      if (!isNewHeredero) {
+        const actual = data.find((h: any) => h.id === parseInt(params.id));
+        const actualValue =
+          actual?.porcentaje_asignado ?? actual?.porcentaje ?? 0;
+        total -= Number(actualValue);
+      }
+
+      const disponible = Math.max(0, 100 - total);
+
+      setPorcentajeTotalAsignado(total);
+      setMaxDisponible(disponible);
+    } catch (err) {
+      console.error("Error al calcular porcentaje total:", err);
+      setMaxDisponible(100); // fallback
+    }
+  };
 
   const handleSave = async () => {
     const localUser = JSON.parse(
@@ -314,16 +376,27 @@ export default function HerederoDetailPage({
                   className="bg-gray-900/80 border-none text-gray-300 text-sm"
                 />
 
-                {wallet && !isVerifying && !isValid && (
-                  <p className="text-xs mt-1 text-red-400">
-                    Wallet inválida. Asegúrate de que sea una dirección válida.
-                  </p>
-                )}
+                {wallet && (
+                  <>
+                    {isVerifying && (
+                      <p className="text-xs mt-1 text-yellow-400">
+                        Verificando wallet...
+                      </p>
+                    )}
 
-                {isVerifying && (
-                  <p className="text-xs mt-1 text-yellow-400">
-                    Verificando wallet...
-                  </p>
+                    {!isVerifying && isValid && (
+                      <p className="text-xs mt-1 text-green-400">
+                        ✅ Wallet válida
+                      </p>
+                    )}
+
+                    {!isVerifying && !isValid && (
+                      <p className="text-xs mt-1 text-red-400">
+                        ❌ Wallet inválida. Asegúrate de que sea una dirección
+                        válida.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -337,11 +410,21 @@ export default function HerederoDetailPage({
                 <Slider
                   value={[porcentaje]}
                   min={1}
-                  max={100}
+                  max={isNaN(maxDisponible) ? 100 : maxDisponible}
                   step={1}
                   onValueChange={(value) => setPorcentaje(value[0])}
                   className="py-4"
                 />
+                {maxDisponible === 0 ? (
+                  <p className="text-xs text-red-400">
+                    Ya has asignado el 100%. Elimina o ajusta otro legado para
+                    continuar.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-gray-400">
+                    Puedes asignar hasta {maxDisponible}%
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground text-gray-400">
                   Recuerda que la suma total de porcentajes entre todos los
                   herederos debe ser 100%

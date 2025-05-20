@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "ID requerido" }, { status: 400 });
   }
 
+  console.log("Buscando herencia con ID:", id);
   const { data, error } = await supabase
     .from("herencias")
     .select("*")
