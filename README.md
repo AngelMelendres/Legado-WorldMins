@@ -1,148 +1,33 @@
-# WLD-101
+## Create a Mini App
 
-Welcome! 🎉
+[Mini apps](https://docs.worldcoin.org/mini-apps) enable third-party developers to create native-like applications within World App.
 
-This repository provides a clear and straightforward template demonstrating how to build a Mini App using [World's Mini Apps](https://docs.world.org/mini-apps).
+This template is a way for you to quickly get started with authentication and examples of some of the trickier commands.
 
-The example Mini App uses **Next.js** and showcases various [commands](https://docs.world.org/mini-apps/quick-start/commands) supported by the MiniKit SDK. Start here to quickly experiment and integrate Worldcoin Mini Apps into your projects.
+## Getting Started
 
-Let's dive in! 🚀
+1. cp .env.example .env.local
+2. Follow the instructions in the .env.local file
+3. Run `npm run dev`
+4. Run `ngrok http 3000`
+5. Run `npx auth secret` to update the `AUTH_SECRET` in the .env.local file
+6. Add your domain to the `allowedDevOrigins` in the next.config.ts file.
+7. [For Testing] If you're using a proxy like ngrok, you need to update the `AUTH_URL` in the .env.local file to your ngrok url.
+8. Continue to developer.worldcoin.org and make sure your app is connected to the right ngrok url
+9. [Optional] For Verify and Send Transaction to work you need to do some more setup in the dev portal. The steps are outlined in the respective component files.
 
----
+## Authentication
 
-## Dependencies
+This starter kit uses [Minikit's](https://github.com/worldcoin/minikit-js) wallet auth to authenticate users, and [next-auth](https://authjs.dev/getting-started) to manage sessions.
 
-- **[pnpm](https://pnpm.io/)**: Fast and efficient package manager.
-- **[ngrok](https://ngrok.com/)**: Expose your local server publicly for easy testing.
-- **[mini-kit-js](https://www.npmjs.com/package/@worldcoin/mini-kit-js)**: JavaScript SDK for World's Mini Apps.
-- **[minikit-react](https://www.npmjs.com/package/@worldcoin/minikit-react)**: React bindings for MiniKit SDK.
-- **[mini-apps-ui-kit-react](https://www.npmjs.com/package/@worldcoin/mini-apps-ui-kit-react)**: Pre-built UI components for Mini Apps.
+## UI Library
 
----
+This starter kit uses [Mini Apps UI Kit](https://github.com/worldcoin/mini-apps-ui-kit) to style the app. We recommend using the UI kit to make sure you are compliant with [World App's design system](https://docs.world.org/mini-apps/design/app-guidelines).
 
-## 🛠️ Setup
+## Eruda
 
-### 1. Clone the repository
+[Eruda](https://github.com/liriliri/eruda) is a tool that allows you to inspect the console while building as a mini app. You should disable this in production.
 
-```bash
-git clone git@github.com:wlding-blocks/wld-mini-apps-101.git
-cd wld-mini-apps-101
-```
+## Contributing
 
-### 2. Install dependencies
-
-```bash
-pnpm install
-```
-
-### 3. Configure your environment variables
-
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Then fill in the required variables:
-
-#### 🔑 APP_ID
-
-Find your **App ID** in the [Developer Portal](https://developer.worldcoin.org/) (`Configuration > Basic`).
-
-<img width="400" alt="image" src="https://github.com/user-attachments/assets/b1d67769-bce7-46b9-a9e2-1591fb7f33f2" />
-
-#### 🔑 DEV_PORTAL_API_KEY
-
-Generate your **API Key** under the `API Keys` section.  
-**Note:** Visible only once—copy it carefully!
-
-<img width="400" alt="image" src="https://github.com/user-attachments/assets/b8b8906a-25e1-411f-8eee-d647fa1e2672" />
-
-#### 🔑 JWT_SECRET
-
-Add a strong, random string as your JWT secret for secure user sessions:
-
-JWT_SECRET=your_secure_random_string_at_least_32_chars_long
-
-This secret is used to:
-- Sign and verify JWT tokens for user authentication
-- Maintain persistent login sessions across page refreshes
-- Securely store user information between visits
-
-**Security Tips:**
-- Use a cryptographically strong random string (at least 32 characters)
-- Never expose this secret in client-side code
-- Consider rotating this secret periodically for enhanced security
-
-Without a properly configured `JWT_SECRET`, the authentication system will not work correctly, and users will need to log in each time they visit your Mini App.
-
----
-
-## ▶️ Running the Project
-
-Run your Mini App locally:
-
-```bash
-pnpm dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 📱 Testing on Mobile
-
-To test your Mini App directly on your phone, expose your app publicly using NGROK.
-
-### 🚀 Using NGROK
-
-Install [NGROK](https://ngrok.com/) and run:
-
-```bash
-ngrok http http://localhost:3000
-```
-
-NGROK provides a publicly accessible URL.
-
-### 🌎 Configuring Your App (Developer Portal)
-
-Go to the [Developer Portal](https://developer.worldcoin.org/) and configure:
-
-- **App URL:** Set it to your NGROK-generated URL.
-
-<img width="400" alt="image" src="https://github.com/user-attachments/assets/4d2c2c1b-cab4-40a7-ad6d-f91d1a77ecc5" />
-
-- **Incognito Actions**: Define an action and use it within `components/Verify/index.tsx`.
-
----
-
-### 📱 Opening your Mini App in World App
-
-From the [Developer Portal](https://developer.worldcoin.org/), navigate to `Configuration > Basic` and scan the generated QR code.
-
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/6f560f96-3fd8-4611-838f-3af7e337d5ce" />
-
-The World App will automatically launch your Mini App! 🎉
-
-<img width="350" alt="image" src="https://github.com/user-attachments/assets/c2c7b49b-5641-4fd1-abc0-a310b621a4dd" />
-
----
-
-## 🔗 Useful Links
-
-- [World Documentation](https://docs.world.org/)
-- [Developer Portal](https://developer.worldcoin.org/)
-
----
-
-## 📞 Contact
-
-Questions or feedback? Feel free to reach out!
-
-- **Telegram:** [@miguellalfaro](https://t.me/miguellalfaro)
-
----
-
-## ℹ️ Notes
-
-This repository is based on the official [minikit-next-template](https://github.com/worldcoin/minikit-next-template). Contributions are welcome—feel free to submit PRs!
+This template was made with help from the amazing [supercorp-ai](https://github.com/supercorp-ai) team.
