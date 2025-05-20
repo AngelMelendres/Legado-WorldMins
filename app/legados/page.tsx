@@ -349,7 +349,7 @@ export default function HerenciasPage() {
               Has alcanzado el límite de herederos de tu plan actual.
             </p>
             <Button
-              onClick={() => router.push("/mejorar-plan")}
+              onClick={() => router.push("/ajustes/pagePlan")}
               className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold"
             >
               Mejorar Plan
