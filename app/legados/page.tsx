@@ -31,47 +31,78 @@ export default function HerenciasPage() {
   const [swipedId, setSwipedId] = useState<number | null>(null);
   const [herederos, setHerederos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [porcentajeTotal, setPorcentajeTotal] = useState(0);
+  const [maxDisponible, setMaxDisponible] = useState(100);
 
   useEffect(() => {
     setFadeIn(true);
 
-    const fetchHerencias = async () => {
-      try {
-        setLoading(true);
-
-        const localUser = JSON.parse(
-          localStorage.getItem("certimind_user") || "{}"
-        );
-
-        if (!localUser.id) {
-          console.warn("Usuario no encontrado en localStorage");
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/herencias", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_usuario: localUser.id }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          console.error("Error cargando legados:", data.error);
-          return;
-        }
-
-        setHerederos(data);
-      } catch (error) {
-        console.error("Fallo al cargar herencias:", error);
-      } finally {
-        setLoading(false);
-      }
+    const loadData = async () => {
+      await fetchHerencias();
+      await fetchPorcentajeTotal();
     };
 
-    fetchHerencias();
+    loadData();
   }, []);
+
+  const fetchPorcentajeTotal = async () => {
+    try {
+      const localUser = JSON.parse(
+        localStorage.getItem("certimind_user") || "{}"
+      );
+      if (!localUser.id) return;
+
+      const res = await fetch("/api/herencias/porcentaje-total", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: localUser.id }),
+      });
+
+      const data = await res.json();
+      const total = data.porcentaje_total ?? 0;
+      setPorcentajeTotal(total);
+      setMaxDisponible(Math.max(0, 100 - total));
+    } catch (error) {
+      console.error("Error al calcular porcentaje total:", error);
+      setPorcentajeTotal(0);
+      setMaxDisponible(100);
+    }
+  };
+
+  const fetchHerencias = async () => {
+    try {
+      setLoading(true);
+
+      const localUser = JSON.parse(
+        localStorage.getItem("certimind_user") || "{}"
+      );
+
+      if (!localUser.id) {
+        console.warn("Usuario no encontrado en localStorage");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/herencias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: localUser.id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Error cargando legados:", data.error);
+        return;
+      }
+
+      setHerederos(data);
+    } catch (error) {
+      console.error("Fallo al cargar herencias:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddHeredero = () => {
     router.push("/legados/nuevo");
@@ -121,10 +152,7 @@ export default function HerenciasPage() {
     setSwipedId(swipedId === id ? null : id);
   };
 
-  const totalPorcentaje = herederos.reduce(
-    (sum, heredero) => sum + heredero.porcentaje,
-    0
-  );
+  const totalPorcentaje = porcentajeTotal;
 
   return (
     <MobileLayout>
@@ -145,10 +173,9 @@ export default function HerenciasPage() {
 
           <div className="flex justify-end">
             <Button
-              onClick={() => {
-                handleAddHeredero();
-              }}
-              className="w-fullbg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md"
+              onClick={handleAddHeredero}
+              disabled={maxDisponible === 0}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               size="sm"
             >
               <Plus className="mr-1 h-4" />
