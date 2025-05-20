@@ -1,26 +1,50 @@
-"use client"
+"use client";
 
-import type { ReactNode } from "react"
-import { Home, FileText, Users, Settings } from "lucide-react"
-import AnimatedBackground from "@/components/animated-background"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
-import MobileHeader from "./mobile-header"
+import type { ReactNode } from "react";
+import { Home, FileText, Users, Settings } from "lucide-react";
+import AnimatedBackground from "@/components/animated-background";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function MobileLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
-  const { theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  const [hasSignedTestament, setHasSignedTestament] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+
+    const userData = localStorage.getItem("certimind_user");
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      const id = parsed.id || parsed.username;
+      setUserId(id);
+
+      // ✅ Usar la API para verificar si ha firmado el testamento
+      fetch("/api/verificar-testamento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id: id }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.firmado) {
+            setHasSignedTestament(true);
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Error al verificar testamento:", err);
+        });
+    }
+  }, []);
 
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(`${path}/`)
-  }
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   if (!mounted) {
     return (
@@ -35,38 +59,63 @@ export default function MobileLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-    )
+    );
   }
 
   return (
     <div className="mobile-app">
-   
       <main className="mobile-content">
         <AnimatedBackground />
         {children}
       </main>
 
-      <nav className="mobile-nav">
-        <Link href="/dashboard" className={`nav-item ${isActive("/dashboard") ? "active" : ""}`}>
+      <nav className="mobile-nav font-bold">
+        <Link
+          href="/inicio"
+          className={`nav-item ${isActive("/inicio") ? "active" : ""}`}
+        >
           <Home className="h-5 w-5" />
-          <span>Inicio</span>
+          <span className="font-bold text-white">Inicio</span>
         </Link>
 
-        <Link href="/herencias" className={`nav-item ${isActive("/herencias") ? "active" : ""}`}>
+        <Link
+          title={
+            !hasSignedTestament
+              ? "Firma tu testamento para habilitar esta opción"
+              : ""
+          }
+          href={hasSignedTestament ? "/legados" : "#"}
+          className={`nav-item ${isActive("/legados") ? "active" : ""} ${
+            !hasSignedTestament ? "opacity-30 pointer-events-none" : ""
+          }`}
+        >
           <Users className="h-5 w-5" />
-          <span>Herencias</span>
+          <span className="font-bold text-white">Legados</span>
         </Link>
 
-        <Link href="/testamento" className={`nav-item ${isActive("/testamento") ? "active" : ""}`}>
+        <Link
+          href="/testamento"
+          className={`nav-item ${isActive("/testamento") ? "active" : ""}`}
+        >
           <FileText className="h-5 w-5" />
-          <span>Testamento</span>
+          <span className="font-bold text-white">Testamento</span>
         </Link>
 
-        <Link href="/configuracion" className={`nav-item ${isActive("/configuracion") ? "active" : ""}`}>
+        <Link
+          title={
+            !hasSignedTestament
+              ? "Firma tu testamento para habilitar esta opción"
+              : ""
+          }
+          href={hasSignedTestament ? "/ajustes" : "#"}
+          className={`nav-item ${isActive("/ajustes") ? "active" : ""} ${
+            !hasSignedTestament ? "opacity-30 pointer-events-none" : ""
+          }`}
+        >
           <Settings className="h-5 w-5" />
-          <span>Ajustes</span>
+          <span className="font-bold text-white">Ajustes</span>
         </Link>
       </nav>
     </div>
-  )
+  );
 }

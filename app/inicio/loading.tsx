@@ -4,7 +4,7 @@ import AnimatedBackground from "@/components/animated-background";
 
 export default function Loading() {
   return (
-    <div className="mobile-app">
+    <div className="mobile-app ">
       <main className="mobile-content flex items-center justify-center relative overflow-hidden min-h-screen">
         <AnimatedBackground />
         <div className="z-10 flex items-center justify-center">

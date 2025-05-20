@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { MiniKit, WalletAuthInput } from "@worldcoin/minikit-js";
 import { signIn } from "next-auth/react";
-import { Infinity, Heart, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/animated-background";
-import MobileHeader from "@/components/mobile-header";
 import MobileNavbar from "@/components/mobile-navbar";
 import Image from "next/image";
 
@@ -17,7 +15,7 @@ const walletAuthInput = (nonce: string): WalletAuthInput => ({
   requestId: "0",
   expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   notBefore: new Date(Date.now() - 60 * 60 * 1000),
-  statement: "Inicia sesión con CertiMind usando tu World ID",
+  statement: "Inicia sesión con Legado usando tu World ID",
 });
 
 export default function Home() {
@@ -100,7 +98,7 @@ export default function Home() {
           JSON.stringify({ id, username, status, profilePictureUrl })
         );
 
-        router.push("/dashboard");
+        router.push("/inicio");
       } else {
         setError("No se pudo iniciar sesión con NextAuth.");
       }
@@ -123,10 +121,9 @@ export default function Home() {
         >
           <div className="flex justify-center">
             <div className="relative w-24 h-24 mb-6">
-            
               <div className="absolute inset-0 flex items-center justify-center">
                 <Image
-                  src="/LogFinal.png"
+                  src="https://cdn-icons-png.flaticon.com/512/147/147144.png"
                   alt="Logo CertiMind"
                   width={67}
                   height={67}

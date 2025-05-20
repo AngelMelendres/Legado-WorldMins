@@ -38,7 +38,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={sora.className}>
+      <body className={sora.className} style={{ backgroundColor: "#0f0c1f" }}>
         <NextAuthProvider>
           <ErudaProvider>
             <MiniKitProvider>

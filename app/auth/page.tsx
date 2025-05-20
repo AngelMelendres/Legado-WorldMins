@@ -12,7 +12,7 @@ export default function AuthPage() {
     // En una implementación real, aquí verificaríamos la autenticación con World ID
     const timer = setTimeout(() => {
       // Redirigimos al dashboard después de la autenticación exitosa
-      router.push("/dashboard")
+      router.push("/inicio")
     }, 2000)
 
     return () => clearTimeout(timer)
