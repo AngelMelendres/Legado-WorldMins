@@ -45,10 +45,11 @@ export default function TestamentoPage() {
   const handleSign = async () => {
     if (!aceptaTerminos || !userId) {
       Swal.fire({
-        icon: "warning",
         title: "Información incompleta",
         text: "Debes completar tu nombre y aceptar los términos para continuar.",
         confirmButtonColor: "#6366f1",
+        background: "#0f0c1f",
+        color: "#ffffff", // texto blanco
       });
       return;
     }
@@ -68,10 +69,11 @@ Autorizo a LEGADO a registrar esta voluntad mediante contrato inteligente y Worl
       if (finalPayload.status !== "success") {
         setIsLoading(false);
         Swal.fire({
-          icon: "error",
           title: "Firma fallida",
           text: "No se pudo firmar el mensaje con World ID.",
           confirmButtonColor: "#d33",
+          background: "#0f0c1f",
+          color: "#ffffff", // texto blanco
         });
         return;
       }
@@ -89,20 +91,22 @@ Autorizo a LEGADO a registrar esta voluntad mediante contrato inteligente y Worl
       if (!res.ok) {
         setIsLoading(false);
         Swal.fire({
-          icon: "error",
           title: "Error al guardar",
           text: data.error || "No se pudo guardar el testamento.",
           confirmButtonColor: "#d33",
+          background: "#0f0c1f",
+          color: "#ffffff", // texto blanco
         });
         return;
       }
 
       // Éxito
       Swal.fire({
-        icon: "success",
         title: "Testamento firmado",
         text: "Tu voluntad digital ha sido firmada y registrada exitosamente.",
         confirmButtonColor: "#4ade80",
+        background: "#0f0c1f",
+        color: "#ffffff", // texto blanco
       });
 
       setShowConfetti(true);
