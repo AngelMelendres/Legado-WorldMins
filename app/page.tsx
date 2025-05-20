@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/animated-background";
 import MobileNavbar from "@/components/mobile-navbar";
 import Image from "next/image";
+import localImage from './imagen.png'; // si estás en el mismo nivel
 
 const walletAuthInput = (nonce: string): WalletAuthInput => ({
   nonce,
@@ -115,21 +116,21 @@ export default function Home() {
         <AnimatedBackground />
 
         <div
-          className={`max-w-md w-full space-y-8 text-center transition-opacity duration-1000 ${
-            fadeIn ? "opacity-100" : "opacity-0"
-          }`}
+          className={`max-w-md w-full space-y-8 text-center transition-opacity duration-1000 ${fadeIn ? "opacity-100" : "opacity-0"
+            }`}
         >
           <div className="flex justify-center">
-            <div className="relative w-24 h-24 mb-6">
+            <div className="relative w-32 h-24 mb-2">
               <div className="absolute inset-0 flex items-center justify-center">
                 <Image
-                  src="https://cdn-icons-png.flaticon.com/512/147/147144.png"
+                  src={localImage}
                   alt="Logo CertiMind"
-                  width={67}
-                  height={67}
+                  width={150}
+                  height={170}
                   className="rounded-full"
                 />
               </div>
+
             </div>
           </div>
 
