@@ -126,18 +126,18 @@ export default function Home() {
             }`}
         >
           <div className="flex justify-center">
-            <div className="relative w-32 h-24 mb-2">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Image
-                  src={localImage}
-                  alt="Logo CertiMind"
-                  width={150}
-                  height={170}
-                  className="rounded-full"
+           <div className="relative w-32 h-24 mb-2">
+            <div className="absolute inset-0 flex items-center justify-center">
+             <Image
+               src={localImage}
+               alt="Logo CertiMind"
+               width={150} // ajustado al contenedor
+               height={170}
+               className="rounded-full object-contain"
                 />
-              </div>
+                </div>
+             </div>
 
-            </div>
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-white">
