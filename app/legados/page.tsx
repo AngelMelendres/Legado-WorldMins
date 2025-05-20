@@ -74,11 +74,11 @@ export default function HerenciasPage() {
   }, []);
 
   const handleAddHeredero = () => {
-    router.push("/legado/nuevo");
+    router.push("/legados/nuevo");
   };
 
   const handleEditHeredero = (id: number) => {
-    router.push(`/legado/${id}`);
+    router.push(`/legados/${id}`);
   };
 
   const handleDeleteHeredero = (id: number) => {
@@ -97,7 +97,7 @@ export default function HerenciasPage() {
       if (result.isConfirmed) {
         try {
           // Lógica para eliminar el heredero
-          const res = await fetch(`/api/herencias/${id}`, {
+          const res = await fetch(`/api/legados/${id}`, {
             method: "DELETE",
           });
 

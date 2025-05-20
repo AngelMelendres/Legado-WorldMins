@@ -85,8 +85,6 @@ export default function HerederoDetailPage({
   const [archivos, setArchivos] = useState<string[]>([]);
   const [isValid, setIsValid] = useState(false);
   const [transactionId, setTransactionId] = useState<string>("");
-  const [herederos, setHerederos] = useState<any[]>([]);
-  const [swipedId, setSwipedId] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const client = createPublicClient({
