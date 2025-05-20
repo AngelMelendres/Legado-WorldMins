@@ -34,8 +34,10 @@ import { Slider } from "@/components/ui/slider";
 import MobileLayout from "@/components/mobile-layout";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 export default function ConfiguracionPage() {
+  const router = useRouter();
   const [fadeIn, setFadeIn] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [tiempoVerificacion, setTiempoVerificacion] = useState("30");
@@ -54,6 +56,9 @@ export default function ConfiguracionPage() {
       setShowConfetti(false);
     }, 3000);
   };
+  const handleVerPlanes = () => {
+    router.push("/ajustes/pagePlan");
+  };
 
   const toggleTheme = () => {
     if (theme === "dark") {
@@ -68,9 +73,8 @@ export default function ConfiguracionPage() {
   return (
     <MobileLayout>
       <div
-        className={`space-y-6 transition-opacity duration-700 ${
-          fadeIn ? "opacity-100" : "opacity-0"
-        }`}
+        className={`space-y-6 transition-opacity duration-700 ${fadeIn ? "opacity-100" : "opacity-0"
+          }`}
       >
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -89,9 +93,8 @@ export default function ConfiguracionPage() {
                 className="confetti"
                 style={{
                   left: `${Math.random() * 100}%`,
-                  backgroundColor: `hsl(${240 + Math.random() * 60}, ${
-                    70 + Math.random() * 30
-                  }%, ${70 + Math.random() * 20}%)`,
+                  backgroundColor: `hsl(${240 + Math.random() * 60}, ${70 + Math.random() * 30
+                    }%, ${70 + Math.random() * 20}%)`,
                   width: `${5 + Math.random() * 10}px`,
                   height: `${5 + Math.random() * 10}px`,
                   animationDelay: `${Math.random() * 2}s`,
@@ -165,7 +168,27 @@ export default function ConfiguracionPage() {
             </div>
           </CardContent>
         </Card>
-      
+        <Card className="glassmorphism border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center text-white">
+              <Shield className="w-5 h-5 mr-2 text-primary" />
+              Plan de suscripción
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Conoce los planes disponibles y elige el que mejor se adapte a tus necesidades.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <Button
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md"
+              onClick={handleVerPlanes} // ✅ MISMA estructura que `handleAddHeredero`
+            >
+              Ver planes
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="space-y-4 mt-6">
           <Button
             variant="outline"
