@@ -33,6 +33,7 @@ export default function HerenciasPage() {
   const [loading, setLoading] = useState(true);
   const [porcentajeTotal, setPorcentajeTotal] = useState(0);
   const [maxDisponible, setMaxDisponible] = useState(100);
+  const [puedeAgregar, setPuedeAgregar] = useState(true);
 
   useEffect(() => {
     setFadeIn(true);
@@ -40,10 +41,28 @@ export default function HerenciasPage() {
     const loadData = async () => {
       await fetchHerencias();
       await fetchPorcentajeTotal();
+      await validarLimiteDeHerederos();
     };
 
     loadData();
   }, []);
+
+  const validarLimiteDeHerederos = async () => {
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+    if (!localUser.id) return;
+
+    const res = await fetch("/api/subscripcion/limite-estado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_usuario: localUser.id }),
+    });
+
+    const data = await res.json();
+
+    setPuedeAgregar(data.puede_agregar ?? false);
+  };
 
   const fetchPorcentajeTotal = async () => {
     try {
@@ -174,7 +193,7 @@ export default function HerenciasPage() {
           <div className="flex justify-end">
             <Button
               onClick={handleAddHeredero}
-              disabled={maxDisponible === 0}
+              disabled={!puedeAgregar}
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               size="sm"
             >
@@ -323,6 +342,20 @@ export default function HerenciasPage() {
         <p className="text-xs text-center text-gray-400 text-muted-foreground mt-4">
           Desliza una tarjeta para ver las opciones o toca para expandir
         </p>
+
+        {!puedeAgregar && (
+          <div className="text-center mt-4 space-y-2">
+            <p className="text-sm text-red-400">
+              Has alcanzado el límite de herederos de tu plan actual.
+            </p>
+            <Button
+              onClick={() => router.push("/mejorar-plan")}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold"
+            >
+              Mejorar Plan
+            </Button>
+          </div>
+        )}
       </div>
     </MobileLayout>
   );
