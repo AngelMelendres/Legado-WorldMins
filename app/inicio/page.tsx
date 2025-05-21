@@ -11,10 +11,23 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import MobileLayout from "@/components/mobile-layout";
-import { createPublicClient, http } from "viem";
-import { mainnet } from "viem/chains";
+import { createPublicClient, http, formatEther } from "viem";
 
-const WLD_CONTRACT = "0x163f8c2467924be0ae7b5347228cabf260318753";
+// ✅ World Chain data
+const WLD_CONTRACT = "0x2cfc85d8e48f8eab294be644d9e25c3030863003";
+const WORLD_CHAIN_ID = 480;
+const ALCHEMY_WORLDCHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/v2/mtea97CBtbHi3YKRpuIS8BrQ0uNL69da";
+
+// ABI para balanceOf
+const WLD_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 const getWLDPriceInUSD = async (): Promise<number> => {
   const res = await fetch(
@@ -26,26 +39,26 @@ const getWLDPriceInUSD = async (): Promise<number> => {
 
 const getWLDBalance = async (walletAddress: string): Promise<number> => {
   const client = createPublicClient({
-    chain: mainnet,
-    transport: http(),
+    chain: {
+      id: WORLD_CHAIN_ID,
+      name: "World Chain",
+      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: {
+        default: { http: [ALCHEMY_WORLDCHAIN_RPC] },
+        public: { http: [ALCHEMY_WORLDCHAIN_RPC] },
+      },
+    },
+    transport: http(ALCHEMY_WORLDCHAIN_RPC),
   });
 
   const balance = await client.readContract({
     address: WLD_CONTRACT,
-    abi: [
-      {
-        constant: true,
-        inputs: [{ name: "_owner", type: "address" }],
-        name: "balanceOf",
-        outputs: [{ name: "balance", type: "uint256" }],
-        type: "function",
-      },
-    ],
+    abi: WLD_ABI,
     functionName: "balanceOf",
     args: [walletAddress],
   });
 
-  return Number(balance) / 1e18;
+  return parseFloat(formatEther(balance));
 };
 
 export default function Legados() {
