@@ -27,6 +27,7 @@ export default function TestamentoPage() {
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [yaFirmado, setYaFirmado] = useState(false);
 
   useEffect(() => {
     setFadeIn(true);
@@ -38,7 +39,22 @@ export default function TestamentoPage() {
     const userData = localStorage.getItem("certimind_user");
     if (userData) {
       const parsed = JSON.parse(userData);
-      setUserId(parsed.username || null);
+      const username = parsed.username || null;
+      setUserId(username);
+
+      // Verificar si ya firmó el testamento
+      const checkFirma = async () => {
+        const res = await fetch("/api/IstestamentoFirmado", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet: parsed.id }),
+        });
+        const data = await res.json();
+
+        setYaFirmado(data.firmado); // true o false
+      };
+
+      checkFirma();
     }
   }, []);
 
@@ -46,12 +62,29 @@ export default function TestamentoPage() {
     if (!aceptaTerminos || !userId) {
       Swal.fire({
         title: "Información incompleta",
-        text: "Debes completar tu nombre y aceptar los términos para continuar.",
+        text: "Debes aceptar los términos para continuar.",
         confirmButtonColor: "#6366f1",
         background: "#0f0c1f",
-        color: "#ffffff", // texto blanco
+        color: "#ffffff",
       });
       return;
+    }
+
+    if (yaFirmado) {
+      const result = await Swal.fire({
+        title: "Testamento ya firmado",
+        text: "Ya has firmado un testamento. ¿Deseas firmarlo nuevamente?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#6366f1",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sí, volver a firmar",
+        cancelButtonText: "Cancelar",
+        background: "#0f0c1f",
+        color: "#ffffff",
+      });
+
+      if (!result.isConfirmed) return;
     }
 
     setIsLoading(true); // 🟡 Inicia el estado de carga
@@ -242,7 +275,7 @@ Autorizo a LEGADO a registrar esta voluntad mediante contrato inteligente y Worl
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Firmar con World
+                  Firmar testamento
                 </>
               )}
             </Button>

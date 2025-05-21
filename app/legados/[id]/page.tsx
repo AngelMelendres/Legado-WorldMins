@@ -1,4 +1,3 @@
-// Este componente reemplaza el contenido anterior e incluye guardado/actualización de herencia vía /api/herencias
 "use client";
 
 import { useState, useEffect } from "react";
@@ -35,6 +34,7 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import PaymentABI from "@/abi/PaymentABI.json";
 import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
 import { createPublicClient, http, parseUnits } from "viem";
+import Swal from "sweetalert2";
 
 const CONTRACT_ADDRESS = "0x7A90E10E9Efe5F796Be0A429aa846f457e15358D";
 const TOKEN_ADDRESS = "0x163f8c2467924be0ae7b5347228cabf260318753";
@@ -145,6 +145,96 @@ export default function HerederoDetailPage({
     return () => clearTimeout(timeout);
   }, [wallet]);
 
+  const generarContrato = async () => {
+    const releaseTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 días
+    const fechaFormateada = new Date(releaseTime * 1000).toLocaleDateString();
+
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+    const id_usuario = localUser.id;
+    const username = localUser.username || "usuario";
+
+    if (!id_usuario || !wallet || porcentaje <= 0) {
+      console.error("Faltan datos para generar el contrato.");
+      return;
+    }
+
+    const mensaje = `
+Yo ${username}, autorizo la creación de un contrato de herencia.
+- Beneficiario: ${wallet}
+- Porcentaje: ${porcentaje}%
+- Fecha de liberación: ${fechaFormateada}
+`.trim();
+
+    try {
+      const { finalPayload } = await MiniKit.commandsAsync.signMessage({
+        message: mensaje,
+      });
+
+      if (finalPayload.status !== "success") {
+        console.warn("Firma rechazada o fallida.");
+        return;
+      }
+
+      const { signature, address } = finalPayload;
+
+      const payload = {
+        id_usuario,
+        wallet,
+        porcentaje,
+        releaseTime,
+        mensaje,
+        firma: signature,
+        address,
+      };
+
+      console.log("📝 Enviando payload firmado:", payload);
+
+      const res = await fetch("/api/creacerContrato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("❌ Error al guardar contrato:", data.error);
+        Swal.fire({
+          title: "Error al generar contrato",
+          text: data.error || "No se pudo generar el contrato.",
+          icon: "error",
+          confirmButtonColor: "#d33",
+          background: "#0f0c1f",
+          color: "#ffffff",
+        });
+        return;
+      }
+
+      Swal.fire({
+        title: "Contrato generado",
+        text: "El contrato inteligente ha sido firmado y guardado exitosamente.",
+        icon: "success",
+        confirmButtonColor: "#4ade80",
+        background: "#0f0c1f",
+        color: "#ffffff",
+      }).then(() => {
+        router.push("/legados");
+      });
+    } catch (error) {
+      console.error("Error durante la firma o el envío:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error inesperado",
+        text: "Ocurrió un error al firmar o guardar el contrato.",
+        confirmButtonColor: "#d33",
+        background: "#0f0c1f",
+        color: "#ffffff",
+      });
+    }
+  };
+
   const validarWallet = async (address: string): Promise<boolean> => {
     try {
       const res = await fetch("/api/verify-wallet", {
@@ -235,53 +325,43 @@ export default function HerederoDetailPage({
 
     if (!res.ok) {
       console.error("Error guardando herencia:", data.error);
+      Swal.fire({
+        title: "Error al guardar",
+        text: data.error || "No se pudo guardar el legado.",
+        icon: "error",
+        confirmButtonColor: "#d33",
+        background: "#0f0c1f",
+        color: "#ffffff",
+      });
       return;
     }
 
-    setShowConfetti(true);
-    setTimeout(() => {
-      setShowConfetti(false);
+    Swal.fire({
+      title: "Guardado exitoso",
+      text: "Los cambios se han guardado correctamente.",
+      icon: "success",
+      confirmButtonColor: "#4ade80",
+      background: "#0f0c1f",
+      color: "#ffffff",
+    }).then(() => {
       router.push("/legados");
-    }, 2000);
+    });
   };
 
   const handleFileUpload = () => {
     setArchivos([...archivos, "Documento_legal.pdf"]);
   };
 
-  const generarContrato = async () => {
-    const releaseTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 días
-
-    try {
-      const value = parseUnits(porcentaje.toString(), 18);
-
-      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            address: CONTRACT_ADDRESS,
-            abi: PaymentABI,
-            functionName: "schedulePayment",
-            args: [TOKEN_ADDRESS, wallet, value, releaseTime],
-          },
-        ],
-      });
-
-      if (finalPayload.status === "success") {
-        setTransactionId(finalPayload.transaction_id);
-      } else {
-        console.error("Transacción fallida:", finalPayload);
-      }
-    } catch (err) {
-      console.error("Error al generar contrato:", err);
-    }
-  };
-
   const puedeGuardar =
     titulo.trim().length > 0 &&
-    wallet.trim().length > 0 &&
+    wallet.trim().length === 42 &&
+    wallet.startsWith("0x") &&
     porcentaje > 0 &&
     isValid &&
+    (!incluirMensaje || (incluirMensaje && mensaje.trim().length > 0)) &&
     !isVerifying;
+
+  const puedeGenerarContrato = puedeGuardar;
 
   return (
     <MobileLayout>
@@ -599,6 +679,7 @@ export default function HerederoDetailPage({
         <div className="pt-6 text-center">
           <Button
             onClick={generarContrato}
+            disabled={!puedeGenerarContrato}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
             Generar Contrato Inteligente
