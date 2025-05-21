@@ -173,25 +173,6 @@ export default function Home() {
               )}
             </Button>
           </div>
-
-          {userId && (
-            <div className="text-green-500 text-sm space-y-1 mt-4">
-              <p>✅ Sesión iniciada</p>
-              <p>ID: {userId}</p>
-              {username && <p>Usuario: {username}</p>}
-              {status && <p>Estado: {status}</p>}
-              {profilePicture && (
-                <Image
-                  src={profilePicture}
-                  alt="Foto de perfil"
-                  width={40}
-                  height={40}
-                  className="rounded-full mx-auto mt-2"
-                />
-              )}
-            </div>
-          )}
-
           {error && <p className="text-red-500 text-sm mt-2">❌ {error}</p>}
         </div>
       </main>
