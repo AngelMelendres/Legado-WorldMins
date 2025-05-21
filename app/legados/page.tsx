@@ -31,47 +31,96 @@ export default function HerenciasPage() {
   const [swipedId, setSwipedId] = useState<number | null>(null);
   const [herederos, setHerederos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [puedeAgregar, setPuedeAgregar] = useState(true);
+  const [porcentajeTotal, setPorcentajeTotal] = useState(0);
+  const [maxDisponible, setMaxDisponible] = useState(100);
 
   useEffect(() => {
     setFadeIn(true);
 
-    const fetchHerencias = async () => {
-      try {
-        setLoading(true);
-
-        const localUser = JSON.parse(
-          localStorage.getItem("certimind_user") || "{}"
-        );
-
-        if (!localUser.id) {
-          console.warn("Usuario no encontrado en localStorage");
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/herencias", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_usuario: localUser.id }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          console.error("Error cargando legados:", data.error);
-          return;
-        }
-
-        setHerederos(data);
-      } catch (error) {
-        console.error("Fallo al cargar herencias:", error);
-      } finally {
-        setLoading(false);
-      }
+    const loadData = async () => {
+      await fetchHerencias();
+      await fetchPorcentajeTotal();
+      await validarLimiteDeHerederos(); // nuevo
     };
 
-    fetchHerencias();
+    loadData();
   }, []);
+  const fetchPorcentajeTotal = async () => {
+    try {
+      const localUser = JSON.parse(
+        localStorage.getItem("certimind_user") || "{}"
+      );
+      if (!localUser.id) return;
+
+      const res = await fetch("/api/herencias/porcentaje-total", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: localUser.id }),
+      });
+
+      const data = await res.json();
+      const total = data.porcentaje_total ?? 0;
+      setPorcentajeTotal(total);
+      setMaxDisponible(Math.max(0, 100 - total));
+    } catch (error) {
+      console.error("Error al calcular porcentaje total:", error);
+      setPorcentajeTotal(0);
+      setMaxDisponible(100);
+    }
+  };
+
+  const fetchHerencias = async () => {
+    try {
+      setLoading(true);
+
+      const localUser = JSON.parse(
+        localStorage.getItem("certimind_user") || "{}"
+      );
+
+      if (!localUser.id) {
+        console.warn("Usuario no encontrado en localStorage");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/herencias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_usuario: localUser.id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Error cargando legados:", data.error);
+        return;
+      }
+
+      setHerederos(data);
+    } catch (error) {
+      console.error("Fallo al cargar herencias:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validarLimiteDeHerederos = async () => {
+    const localUser = JSON.parse(
+      localStorage.getItem("certimind_user") || "{}"
+    );
+    if (!localUser.id) return;
+
+    const res = await fetch("/api/subscripcion/limite-estado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_usuario: localUser.id }),
+    });
+
+    const data = await res.json();
+
+    setPuedeAgregar(data.puede_agregar ?? false);
+  };
 
   const handleAddHeredero = () => {
     router.push("/legados/nuevo");
@@ -81,63 +130,62 @@ export default function HerenciasPage() {
     router.push(`/legados/${id}`);
   };
 
-const handleDeleteHeredero = (heredero: { id: number; walletId: string }) => {
-  Swal.fire({
-    title: "¿Estás seguro?",
-    text: "Este heredero será eliminado de forma permanente.",
-    showCancelButton: true,
-    background: "#0f0c1f",
-    color: "#ffffff",
-    confirmButtonColor: "#d33",
-    cancelButtonColor: "#3085d6",
-    confirmButtonText: "Sí, eliminar",
-    cancelButtonText: "Cancelar",
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const localUser = JSON.parse(
-          localStorage.getItem("certimind_user") || "{}"
-        );
+  const handleDeleteHeredero = (id: number) => {
+    Swal.fire({
+      title: "¿Estás seguro?",
+      text: "Este heredero será eliminado de forma permanente.",
+      showCancelButton: true,
+      background: "#0f0c1f",
+      color: "#ffffff",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch("/api/herencias/deleteuser", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ id }), // 👈 Solo se envía el ID
+          });
 
-        console.log("usuario", localUser.id )
-        console.log("wallet",heredero)
+          const data = await res.json();
 
-        const res = await fetch("/api/herencias/deleteuser", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id_usuario: localUser.id,
-            id: heredero,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          setHerederos((prev) => prev.filter((h) => h.id !== heredero.id));
-          Swal.fire("Eliminado", "El heredero ha sido eliminado.", "success");
-        } else {
-          Swal.fire("Error", data.error || "No se pudo eliminar.", "error");
+          if (res.ok) {
+            setHerederos((prev) => prev.filter((h) => h.id !== id));
+            Swal.fire({
+              title: "Eliminado",
+              text: "El heredero ha sido eliminado.",
+              icon: "success",
+              background: "#0f0c1f",
+              color: "#ffffff",
+              confirmButtonColor: "#d33",
+            });
+          } else {
+            Swal.fire({
+              title: "Error",
+              text: data.error || "No se pudo eliminar.",
+              icon: "error",
+              background: "#0f0c1f",
+              color: "#ffffff",
+              confirmButtonColor: "#d33",
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          Swal.fire("Error", "Error de red o servidor.", "error");
         }
-      } catch (err) {
-        console.error(err);
-        Swal.fire("Error", "Error de red o servidor.", "error");
       }
-    }
-  });
-};
-
+    });
+  };
 
   const handleSwipe = (id: number) => {
     setSwipedId(swipedId === id ? null : id);
   };
-
-  const totalPorcentaje = herederos.reduce(
-    (sum, heredero) => sum + heredero.porcentaje,
-    0
-  );
+  const totalPorcentaje = porcentajeTotal;
 
   return (
     <MobileLayout>
@@ -158,11 +206,9 @@ const handleDeleteHeredero = (heredero: { id: number; walletId: string }) => {
 
           <div className="flex justify-end">
             <Button
-              onClick={() => {
-                handleAddHeredero();
-              }}
-              className="w-fullbg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md"
-              size="sm"
+              onClick={handleAddHeredero}
+              disabled={!puedeAgregar}
+              className="..."
             >
               <Plus className="mr-1 h-4" />
               Nuevo Heredero
@@ -305,6 +351,20 @@ const handleDeleteHeredero = (heredero: { id: number; walletId: string }) => {
             ))
           )}
         </div>
+
+        {!puedeAgregar && (
+          <div className="text-center mt-4 space-y-2">
+            <p className="text-sm text-red-400">
+              Has alcanzado el límite de herederos de tu plan actual.
+            </p>
+            <Button
+              onClick={() => router.push("/ajustes/pagePlan")}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold"
+            >
+              Mejorar Plan
+            </Button>
+          </div>
+        )}
 
         <p className="text-xs text-center text-gray-400 text-muted-foreground mt-4">
           Desliza una tarjeta para ver las opciones o toca para expandir

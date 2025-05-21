@@ -241,7 +241,7 @@ export default function HerederoDetailPage({
     setShowConfetti(true);
     setTimeout(() => {
       setShowConfetti(false);
-      router.push("/herencias");
+      router.push("/legados");
     }, 2000);
   };
 

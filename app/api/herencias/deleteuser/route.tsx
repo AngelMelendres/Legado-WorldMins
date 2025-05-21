@@ -10,21 +10,19 @@ const supabase = createClient(
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { id_usuario, id } = await req.json(); // ← aquí debe ser wallet
+    const { id } = await req.json();
 
-    if (!id_usuario || !id) {
+    if (!id) {
       return NextResponse.json(
-        { error: "Se requiere id_usuario y wallet." },
+        { error: "Se requiere el id del heredero." },
         { status: 400 }
       );
     }
 
-   
-    // Eliminar la herencia
+    // Eliminar la herencia solo por ID
     const { error: deleteError } = await supabase
       .from("herencias")
       .delete()
-      .eq("id_usuario", id_usuario)
       .eq("id", id);
 
     if (deleteError) {
