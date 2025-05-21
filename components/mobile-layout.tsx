@@ -90,7 +90,7 @@ export default function MobileLayout({ children }: { children: ReactNode }) {
           }`}
         >
           <Users className="h-5 w-5" />
-          <span className="font-bold text-white">Legados</span>
+          <span className="font-bold text-white">Herederos</span>
         </Link>
 
         <Link
