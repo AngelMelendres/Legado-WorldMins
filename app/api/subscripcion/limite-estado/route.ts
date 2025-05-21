@@ -11,10 +11,13 @@ export async function POST(req: Request) {
   const { id_usuario } = await req.json();
 
   if (!id_usuario) {
+    console.log("⛔️ id_usuario no proporcionado");
     return NextResponse.json({ error: "id_usuario requerido" }, { status: 400 });
   }
 
-  // Obtener límite del plan activo
+  console.log("🔑 id_usuario:", id_usuario);
+
+  // 1. Obtener subscripción activa
   const { data: sub, error: subError } = await supabase
     .from("user_subscriptions")
     .select("id_plan")
@@ -24,10 +27,16 @@ export async function POST(req: Request) {
     .limit(1)
     .maybeSingle();
 
-  if (subError) return NextResponse.json({ error: subError.message }, { status: 500 });
+  if (subError) {
+    console.error("❌ Error al obtener subscripción:", subError.message);
+    return NextResponse.json({ error: subError.message }, { status: 500 });
+  }
 
-  let limite = 1; // Por defecto
+  console.log("📦 Subscripción activa:", sub);
 
+  let limite = 2; // Límite por defecto
+
+  // 2. Obtener plan asociado si existe
   if (sub) {
     const { data: plan, error: planError } = await supabase
       .from("planes")
@@ -36,18 +45,31 @@ export async function POST(req: Request) {
       .eq("is_active", true)
       .single();
 
-    if (planError) return NextResponse.json({ error: planError.message }, { status: 500 });
+    if (planError) {
+      console.error("❌ Error al obtener plan:", planError.message);
+      return NextResponse.json({ error: planError.message }, { status: 500 });
+    }
+
+    console.log("📊 Plan activo encontrado:", plan);
     limite = plan.limite_herederos;
+  } else {
+    console.log("ℹ️ No se encontró subscripción activa. Se usará límite por defecto.");
   }
 
-  // Contar herederos existentes
+  // 3. Contar herederos actuales
   const { count, error: countError } = await supabase
     .from("herencias")
     .select("*", { count: "exact", head: true })
     .eq("id_usuario", id_usuario);
 
-  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 });
+  if (countError) {
+    console.error("❌ Error al contar herederos:", countError.message);
+    return NextResponse.json({ error: countError.message }, { status: 500 });
+  }
 
+  console.log("🔢 Herederos actuales:", count);
+
+  // 4. Devolver resultado final
   return NextResponse.json({
     limite_herederos: limite,
     herederos_actuales: count,

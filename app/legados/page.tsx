@@ -114,6 +114,8 @@ export default function HerenciasPage() {
       body: JSON.stringify({ id_usuario: localUser.id }),
     });
 
+    console.log(res);
+
     const data = await res.json();
     setPuedeAgregar(data.puede_agregar ?? false);
   };
