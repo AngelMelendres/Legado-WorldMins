@@ -31,97 +31,47 @@ export default function HerenciasPage() {
   const [swipedId, setSwipedId] = useState<number | null>(null);
   const [herederos, setHerederos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [porcentajeTotal, setPorcentajeTotal] = useState(0);
-  const [maxDisponible, setMaxDisponible] = useState(100);
-  const [puedeAgregar, setPuedeAgregar] = useState(true);
 
   useEffect(() => {
     setFadeIn(true);
 
-    const loadData = async () => {
-      await fetchHerencias();
-      await fetchPorcentajeTotal();
-      await validarLimiteDeHerederos();
+    const fetchHerencias = async () => {
+      try {
+        setLoading(true);
+
+        const localUser = JSON.parse(
+          localStorage.getItem("certimind_user") || "{}"
+        );
+
+        if (!localUser.id) {
+          console.warn("Usuario no encontrado en localStorage");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch("/api/herencias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id_usuario: localUser.id }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Error cargando legados:", data.error);
+          return;
+        }
+
+        setHerederos(data);
+      } catch (error) {
+        console.error("Fallo al cargar herencias:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    loadData();
+    fetchHerencias();
   }, []);
-
-  const validarLimiteDeHerederos = async () => {
-    const localUser = JSON.parse(
-      localStorage.getItem("certimind_user") || "{}"
-    );
-    if (!localUser.id) return;
-
-    const res = await fetch("/api/subscripcion/limite-estado", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_usuario: localUser.id }),
-    });
-
-    const data = await res.json();
-
-    setPuedeAgregar(data.puede_agregar ?? false);
-  };
-
-  const fetchPorcentajeTotal = async () => {
-    try {
-      const localUser = JSON.parse(
-        localStorage.getItem("certimind_user") || "{}"
-      );
-      if (!localUser.id) return;
-
-      const res = await fetch("/api/herencias/porcentaje-total", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_usuario: localUser.id }),
-      });
-
-      const data = await res.json();
-      const total = data.porcentaje_total ?? 0;
-      setPorcentajeTotal(total);
-      setMaxDisponible(Math.max(0, 100 - total));
-    } catch (error) {
-      console.error("Error al calcular porcentaje total:", error);
-      setPorcentajeTotal(0);
-      setMaxDisponible(100);
-    }
-  };
-
-  const fetchHerencias = async () => {
-    try {
-      setLoading(true);
-
-      const localUser = JSON.parse(
-        localStorage.getItem("certimind_user") || "{}"
-      );
-
-      if (!localUser.id) {
-        console.warn("Usuario no encontrado en localStorage");
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch("/api/herencias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_usuario: localUser.id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Error cargando legados:", data.error);
-        return;
-      }
-
-      setHerederos(data);
-    } catch (error) {
-      console.error("Fallo al cargar herencias:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddHeredero = () => {
     router.push("/legados/nuevo");
@@ -131,47 +81,63 @@ export default function HerenciasPage() {
     router.push(`/legados/${id}`);
   };
 
-  const handleDeleteHeredero = (id: number) => {
-    Swal.fire({
-      title: "¿Estás seguro?",
-      text: "Este heredero será eliminado de forma permanente.",
-      showCancelButton: true,
-      background: "#0f0c1f",
-      color: "#ffffff", // texto blanco
+const handleDeleteHeredero = (heredero: { id: number; walletId: string }) => {
+  Swal.fire({
+    title: "¿Estás seguro?",
+    text: "Este heredero será eliminado de forma permanente.",
+    showCancelButton: true,
+    background: "#0f0c1f",
+    color: "#ffffff",
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const localUser = JSON.parse(
+          localStorage.getItem("certimind_user") || "{}"
+        );
 
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          // Lógica para eliminar el heredero
-          const res = await fetch(`/api/legados/${id}`, {
-            method: "DELETE",
-          });
+        console.log("usuario", localUser.id )
+        console.log("wallet",heredero)
 
-          if (res.ok) {
-            // Opcional: actualiza el estado para remover al heredero eliminado
-            setHerederos((prev) => prev.filter((h) => h.id !== id));
-            Swal.fire("Eliminado", "El heredero ha sido eliminado.", "success");
-          } else {
-            const data = await res.json();
-            Swal.fire("Error", data.error || "No se pudo eliminar.", "error");
-          }
-        } catch (err) {
-          console.error(err);
-          Swal.fire("Error", "Error de red o servidor.", "error");
+        const res = await fetch("/api/herencias/deleteuser", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id_usuario: localUser.id,
+            id: heredero,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setHerederos((prev) => prev.filter((h) => h.id !== heredero.id));
+          Swal.fire("Eliminado", "El heredero ha sido eliminado.", "success");
+        } else {
+          Swal.fire("Error", data.error || "No se pudo eliminar.", "error");
         }
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Error", "Error de red o servidor.", "error");
       }
-    });
-  };
+    }
+  });
+};
+
 
   const handleSwipe = (id: number) => {
     setSwipedId(swipedId === id ? null : id);
   };
 
-  const totalPorcentaje = porcentajeTotal;
+  const totalPorcentaje = herederos.reduce(
+    (sum, heredero) => sum + heredero.porcentaje,
+    0
+  );
 
   return (
     <MobileLayout>
@@ -192,9 +158,10 @@ export default function HerenciasPage() {
 
           <div className="flex justify-end">
             <Button
-              onClick={handleAddHeredero}
-              disabled={!puedeAgregar}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                handleAddHeredero();
+              }}
+              className="w-fullbg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-md"
               size="sm"
             >
               <Plus className="mr-1 h-4" />
@@ -342,20 +309,6 @@ export default function HerenciasPage() {
         <p className="text-xs text-center text-gray-400 text-muted-foreground mt-4">
           Desliza una tarjeta para ver las opciones o toca para expandir
         </p>
-
-        {!puedeAgregar && (
-          <div className="text-center mt-4 space-y-2">
-            <p className="text-sm text-red-400">
-              Has alcanzado el límite de herederos de tu plan actual.
-            </p>
-            <Button
-              onClick={() => router.push("/ajustes/pagePlan")}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold"
-            >
-              Mejorar Plan
-            </Button>
-          </div>
-        )}
       </div>
     </MobileLayout>
   );
