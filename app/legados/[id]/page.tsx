@@ -88,6 +88,7 @@ export default function HerederoDetailPage({
   const [isVerifying, setIsVerifying] = useState(false);
   const [porcentajeTotalAsignado, setPorcentajeTotalAsignado] = useState(0);
   const [maxDisponible, setMaxDisponible] = useState(100);
+  const [isLoadingHeredero, setIsLoadingHeredero] = useState(false);
 
   const client = createPublicClient({
     chain: worldchain,
@@ -102,33 +103,37 @@ export default function HerederoDetailPage({
     transactionId,
   });
 
-  useEffect(() => {
-    setFadeIn(true);
-    if (!isNewHeredero) {
-      const fetchData = async () => {
-        try {
-          const res = await fetch(`/api/herencias/get?id=${params.id}`);
-          const data = await res.json();
+useEffect(() => {
+  setFadeIn(true);
+  if (!isNewHeredero) {
+    const fetchData = async () => {
+      try {
+        setIsLoadingHeredero(true);
+        const res = await fetch(`/api/herencias/get?id=${params.id}`);
+        const data = await res.json();
 
-          console.log("Datos de la herencia:", data);
-          setTitulo(data.titulo);
-          setWallet(data.walletId);
-          setPorcentaje(data.porcentaje_asignado);
-          setMensaje(data.descripcion);
-          setIncluirMensaje(data.tipo_media?.includes("mensaje"));
-          setIncluirArchivos(data.tipo_media?.includes("archivos"));
-          setIncluirFotos(data.tipo_media?.includes("fotos"));
-          setIncluirVideo(data.tipo_media?.includes("video"));
-        } catch (err) {
-          console.error("Error al cargar la herencia:", err);
-        }
-      };
+        console.log("Datos de la herencia:", data);
+        setTitulo(data.titulo);
+        setWallet(data.walletId);
+        setPorcentaje(data.porcentaje_asignado);
+        setMensaje(data.descripcion);
+        setIncluirMensaje(data.tipo_media?.includes("mensaje"));
+        setIncluirArchivos(data.tipo_media?.includes("archivos"));
+        setIncluirFotos(data.tipo_media?.includes("fotos"));
+        setIncluirVideo(data.tipo_media?.includes("video"));
+      } catch (err) {
+        console.error("Error al cargar la herencia:", err);
+      } finally {
+        setIsLoadingHeredero(false);
+      }
+    };
 
-      fetchData();
-    }
+    fetchData();
+  }
 
-    fetchPorcentajeTotal();
-  }, [isNewHeredero, params.id]);
+  fetchPorcentajeTotal();
+}, [isNewHeredero, params.id]);
+
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -404,111 +409,145 @@ Yo ${username}, autorizo la creación de un contrato de herencia.
           </div>
         )}
 
-        <Card className="glassmorphism border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center text-secondary">
-              <User className="w-5 h-5 mr-2 text-primary" /> Información de
-              legado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex justify-center mb-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src="https://static.vecteezy.com/system/resources/thumbnails/021/468/808/small_2x/happy-friends-posing-together-png.png" />
-                <AvatarFallback className="bg-primary/20 text-xl">
-                  {titulo ? titulo.charAt(0).toUpperCase() : "?"}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="titulo" className="text-white">
-                  Titulo del legado
-                </Label>
-                <Input
-                  id="titulo"
-                  placeholder="Titulo de la herencia"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  className="bg-gray-900/80 border-none text-gray-300"
-                />
+        {isLoadingHeredero ? (
+          <Card className="glassmorphism border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center text-secondary">
+                <User className="w-5 h-5 mr-2 text-primary" /> Información de
+                legado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 animate-pulse">
+              <div className="flex justify-center mb-4">
+                <div className="h-20 w-20 rounded-full bg-gray-700" />
               </div>
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor="wallet"
-                  className="flex items-center text-white"
-                >
-                  <Wallet className="w-4 h-4 mr-2 text-white" /> Dirección de
-                  wallet
-                </Label>
-
-                <Input
-                  id="wallet"
-                  placeholder="0x..."
-                  value={wallet}
-                  onChange={(e) => setWallet(e.target.value)}
-                  className="bg-gray-900/80 border-none text-gray-300 text-sm"
-                />
-
-                {wallet && (
-                  <>
-                    {isVerifying && (
-                      <p className="text-xs mt-1 text-yellow-400">
-                        Verificando wallet...
-                      </p>
-                    )}
-
-                    {!isVerifying && isValid && (
-                      <p className="text-xs mt-1 text-green-400">
-                        ✅ Wallet válida
-                      </p>
-                    )}
-
-                    {!isVerifying && !isValid && (
-                      <p className="text-xs mt-1 text-red-400">
-                        ❌ Wallet inválida. Asegúrate de que sea una dirección
-                        válida.
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-4 pt-2">
-                <div className="flex justify-between items-center">
-                  <Label className="text-white">Porcentaje asignado</Label>
-                  <span className="text-2xl font-bold text-primary">
-                    {porcentaje}%
-                  </span>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="h-4 w-1/3 bg-gray-700 rounded" />
+                  <div className="h-10 w-full bg-gray-800 rounded" />
                 </div>
-                <Slider
-                  value={[porcentaje]}
-                  min={1}
-                  max={isNaN(maxDisponible) ? 100 : maxDisponible}
-                  step={1}
-                  onValueChange={(value) => setPorcentaje(value[0])}
-                  className="py-4"
-                />
-                {maxDisponible === 0 ? (
-                  <p className="text-xs text-red-400">
-                    Ya has asignado el 100%. Elimina o ajusta otro legado para
-                    continuar.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground text-gray-400">
-                    Puedes asignar hasta {maxDisponible}%
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground text-gray-400">
-                  Recuerda que la suma total de porcentajes entre todos los
-                  herederos debe ser 100%
-                </p>
+
+                <div className="space-y-2">
+                  <div className="h-4 w-1/2 bg-gray-700 rounded" />
+                  <div className="h-10 w-full bg-gray-800 rounded" />
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 w-1/4 bg-gray-700 rounded" />
+                    <div className="h-6 w-12 bg-gray-700 rounded" />
+                  </div>
+                  <div className="h-6 w-full bg-gray-800 rounded" />
+                  <div className="h-4 w-2/3 bg-gray-700 rounded" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="glassmorphism border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center text-secondary">
+                <User className="w-5 h-5 mr-2 text-primary" /> Información de
+                legado
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center mb-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src="https://static.vecteezy.com/system/resources/thumbnails/021/468/808/small_2x/happy-friends-posing-together-png.png" />
+                  <AvatarFallback className="bg-primary/20 text-xl">
+                    {titulo ? titulo.charAt(0).toUpperCase() : "?"}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="titulo" className="text-white">
+                    Titulo del legado
+                  </Label>
+                  <Input
+                    id="titulo"
+                    placeholder="Titulo de la herencia"
+                    value={titulo}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    className="bg-gray-900/80 border-none text-gray-300"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="wallet"
+                    className="flex items-center text-white"
+                  >
+                    <Wallet className="w-4 h-4 mr-2 text-white" /> Dirección de
+                    wallet
+                  </Label>
+                  <Input
+                    id="wallet"
+                    placeholder="0x..."
+                    value={wallet}
+                    onChange={(e) => setWallet(e.target.value)}
+                    className="bg-gray-900/80 border-none text-gray-300 text-sm"
+                  />
+
+                  {wallet && (
+                    <>
+                      {isVerifying && (
+                        <p className="text-xs mt-1 text-yellow-400">
+                          Verificando wallet...
+                        </p>
+                      )}
+                      {!isVerifying && isValid && (
+                        <p className="text-xs mt-1 text-green-400">
+                          ✅ Wallet válida
+                        </p>
+                      )}
+                      {!isVerifying && !isValid && (
+                        <p className="text-xs mt-1 text-red-400">
+                          ❌ Wallet inválida. Asegúrate de que sea una dirección
+                          válida.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-white">Porcentaje asignado</Label>
+                    <span className="text-2xl font-bold text-primary">
+                      {porcentaje}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={[porcentaje]}
+                    min={1}
+                    max={isNaN(maxDisponible) ? 100 : maxDisponible}
+                    step={1}
+                    onValueChange={(value) => setPorcentaje(value[0])}
+                    className="py-4"
+                  />
+                  {maxDisponible === 0 ? (
+                    <p className="text-xs text-red-400">
+                      Ya has asignado el 100%. Elimina o ajusta otro legado para
+                      continuar.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-gray-400">
+                      Puedes asignar hasta {maxDisponible}%
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground text-gray-400">
+                    Recuerda que la suma total de porcentajes entre todos los
+                    herederos debe ser 100%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="glassmorphism border-primary/20 mt-6">
           <CardHeader>
